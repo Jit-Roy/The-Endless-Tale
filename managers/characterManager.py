@@ -30,8 +30,8 @@ class CharacterManager:
         - system_instruction = full persona (traits, background, relationships, goals)
         - temperature / top_p   = character-specific values
 
-        All subsequent calls reuse the same chat session, so the SDK naturally
-        accumulates turn history without any manual tracking on our side.
+        Each call to generate_content() on this model is stateless — no history
+        is accumulated between turns. Context is passed explicitly via memory_context.
         """
         name = character.persona.name
         if name not in self._character_models:
@@ -132,11 +132,9 @@ class CharacterManager:
         """Build the character's current state context including and current objective."""
         if not character.state:
             return ""
-        
         if character.state.current_objective:
-            context = f"\n- Current Objective: {character.state.current_objective}"
-        
-            return context
+            return f"\n- Current Objective: {character.state.current_objective}"
+        return ""
     
     def build_memory_context(self, character: Character, last_n_messages: Optional[int] = None) -> str:
         """Build the memory context string with actions noted from character's perceived messages.

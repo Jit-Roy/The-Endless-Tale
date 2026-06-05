@@ -228,13 +228,10 @@ class TurnManager:
             
             self.timeline_manager.add_event(self.timeline, event)
             
-            # Broadcast to currently active characters
+            # Broadcast to currently active characters (including the entrant, who is now in
+            # current_participants after add_event updated it above)
             active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
             self.character_manager.broadcast_event_to_characters(active_characters, event)
-            
-            # For entries, also add to the entering character's memory
-            if is_entry:
-                self.character_manager.broadcast_event_to_characters([character], event)
             
             self._status(f"   {description}")
             self._sleep(1)
