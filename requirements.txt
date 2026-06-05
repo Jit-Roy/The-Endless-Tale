@@ -1,4 +1,6 @@
-openai
+google-genai
 pydantic
 python-dotenv
 colorama
+PyQt5
+PySide6

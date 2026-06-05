@@ -3,7 +3,7 @@
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/license/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/Jit-Roy/RoleRealm/pulls)
-[![OpenRouter](https://img.shields.io/badge/powered%20by-OpenRouter-orange)](https://openrouter.ai/)
+[![Google Gemini](https://img.shields.io/badge/powered%20by-Google%20Gemini-blue)](https://developers.generativeai.google/)
 
 An interactive AI-powered roleplay system that brings characters to life through dynamic conversations and story-driven experiences.
 
@@ -32,7 +32,7 @@ An interactive AI-powered roleplay system that brings characters to life through
 ### Prerequisites
 
 - Python 3.8+
-- OpenRouter API key
+- Google Gemini API key
 
 ### Installation
 
@@ -47,9 +47,9 @@ cd RoleRealm
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file and add your OpenRouter API key:
+3. Create a `.env` file and add your Google Gemini API key:
 ```
-OPENROUTER_API_KEY=your_api_key_here
+GOOGLE_API_KEY=your_api_key_here
 ```
 
 ### Running RoleRealm

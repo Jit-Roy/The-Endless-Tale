@@ -6,8 +6,7 @@ import json
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from data_models import CharacterPersona, Message, Character, CharacterMemory, CharacterState, TimelineEvent, Scene, Action, CharacterEntry, CharacterExit
-from config import Config
-from openrouter_client import GenerativeModel
+from gemini_client import Config, GenerativeModel
 from helpers.response_parser import parse_json_response
 
 
@@ -323,7 +322,7 @@ class CharacterManager:
             priority = decision_data.get("priority", 0.0)
             reasoning = decision_data.get("reasoning", "No reasoning provided")
             
-            # Extract dialouge based on response type
+            # Extract dialogue based on response type
             if response_type == "speak":
                 dialogue = decision_data.get("dialogue", None) 
                 action = decision_data.get("action", None)  
@@ -342,10 +341,23 @@ class CharacterManager:
                 action
             )
             
-        except json.JSONDecodeError as e:
-            raise e
+        except (json.JSONDecodeError, ValueError) as e:
+            # If the LLM response cannot be parsed, fall back to silence.
+            return (
+                "silent",
+                0.0,
+                f"Unable to interpret response: {e}",
+                None,
+                None
+            )
         except Exception as e:
-            raise e
+            return (
+                "silent",
+                0.0,
+                f"Error generating decision: {e}",
+                None,
+                None
+            )
     
     def broadcast_event_to_characters(self, characters: List[Character], event: TimelineEvent) -> None:
         """

@@ -909,7 +909,7 @@ Initialize roleplay system.
 - `initial_scene_description` (str, optional): Initial scene text
 
 **Raises**:
-- `ValueError`: OPENROUTER_API_KEY not set
+- `ValueError`: GOOGLE_API_KEY not set
 
 **Example**:
 ```python
@@ -945,11 +945,10 @@ Get path to conversation save file.
 ```python
 class Config:
     # API Settings
-    OPENROUTER_API_KEY: Optional[str]
-    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    GOOGLE_API_KEY: Optional[str]
     
     # Model Settings
-    DEFAULT_MODEL: str = "x-ai/grok-4.1-fast"
+    DEFAULT_MODEL: str = "gemma-4-31b-it"
     MODEL_TEMPERATURE: float = 0.7
     MAX_TOKENS: int = 1024
     RESPONSE_TIMEOUT: int = 20
@@ -967,7 +966,7 @@ class Config:
 
 Create `.env` file:
 ```
-OPENROUTER_API_KEY=your_api_key_here
+GOOGLE_API_KEY=your_api_key_here
 ```
 
 ---
@@ -1005,7 +1004,7 @@ data = parse_json_response(response.text)
 
 ### GenerativeModel
 
-**Location**: `openrouter_client.py`
+**Location**: `gemini_client.py`
 
 #### Methods
 
@@ -1014,11 +1013,11 @@ data = parse_json_response(response.text)
 def __init__(model_name: str, api_key: Optional[str] = None)
 ```
 
-Initialize OpenRouter API client.
+Initialize Google Gemini API client.
 
 **Parameters**:
 - `model_name` (str): Model to use
-- `api_key` (str, optional): API key (default: Config.OPENROUTER_API_KEY)
+- `api_key` (str, optional): API key (default: Config.GOOGLE_API_KEY)
 
 ---
 

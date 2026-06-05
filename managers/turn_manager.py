@@ -14,7 +14,7 @@ from data_models import Message, TimelineHistory, Character, Scene, CharacterEnt
 from managers.timelineManager import TimelineManager
 from managers.characterManager import CharacterManager
 from managers.storyManager import StoryManager
-from config import Config
+from gemini_client import Config
 
 
 class TurnManager:
@@ -33,7 +33,8 @@ class TurnManager:
         timeline: TimelineHistory,
         max_consecutive_ai_turns: int = None,
         priority_randomness: float = None,
-        save_callback: Optional[callable] = None
+        save_callback: Optional[callable] = None,
+        on_status: Optional[callable] = None
     ):
         """
         Initialize the turn manager.
@@ -44,6 +45,8 @@ class TurnManager:
             max_consecutive_ai_turns: Maximum number of consecutive AI turns (defaults to Config.MAX_CONSECUTIVE_AI_TURNS)
             priority_randomness: Random factor to add to priority for naturalness (defaults to Config.PRIORITY_RANDOMNESS)
             save_callback: Optional callback function to save conversation after AI responses
+            on_status: Optional callback(str) called instead of print() for status messages.
+                       When set, time.sleep() calls are also skipped (GUI mode).
         """
         self.characters = characters
         self.timeline = timeline
@@ -51,6 +54,7 @@ class TurnManager:
         self.max_consecutive_ai_turns = max_consecutive_ai_turns or Config.MAX_CONSECUTIVE_AI_TURNS
         self.priority_randomness = priority_randomness or Config.PRIORITY_RANDOMNESS
         self.save_callback = save_callback
+        self.on_status = on_status  # injectable status callback for GUI mode
         
         # Initialize managers
         self.timeline_manager = TimelineManager()
@@ -60,6 +64,22 @@ class TurnManager:
         self.turn_count = 0
         self.consecutive_silence_rounds = 0
     
+    def _status(self, text: str):
+        """Emit a status message via callback if set, otherwise print."""
+        if self.on_status:
+            self.on_status(text)
+        else:
+            try:
+                print(text)
+            except UnicodeEncodeError:
+                # Fallback: strip unencodable chars for Windows terminals
+                print(text.encode('ascii', errors='replace').decode('ascii'))
+
+    def _sleep(self, seconds: float):
+        """Sleep only in terminal mode; skip in GUI mode (on_status is set)."""
+        if not self.on_status:
+            time.sleep(seconds)
+
     def _collect_speaking_decisions(self) -> List[Tuple[Character, Tuple[str, float, str, Optional[str], Optional[str]]]]:
         """
         Collect response decisions from all AI characters using parallel execution.
@@ -94,16 +114,16 @@ class TurnManager:
                         decisions.append((character, (response_type, priority, reasoning, dialogue, action)))
                         emoji = "💭" if response_type == "speak" else "👤"
                         type_label = "Speech" if response_type == "speak" else "Action"
-                        print(f"{emoji} {character.persona.name}: Priority {priority:.2f} ({type_label}) - {reasoning}")
+                        self._status(f"{emoji} {character.persona.name}: Priority {priority:.2f} ({type_label}) - {reasoning}")
                     else:
-                        print(f"🤐 {character.persona.name}: {reasoning}")
+                        self._status(f"🤐 {character.persona.name}: {reasoning}")
                         
                 except Exception as e:
                     character = futures[future]
-                    print(f"⚠️Error getting decision from {character.persona.name}: {e}")
+                    self._status(f"⚠️ Error getting decision from {character.persona.name}: {e}")
         
         if quota_exceeded:
-            print("⚠️API QUOTA EXCEEDED")
+            self._status("⚠️ API QUOTA EXCEEDED")
         
         return decisions
     
@@ -165,14 +185,12 @@ class TurnManager:
             
             # Display scene based on type
             if scene_type == 'transition':
-                print(f"\n🚶 SCENE TRANSITION")
-                print(f"📍 New Location: {scene.location}")
+                self._status(f"SCENE TRANSITION → {scene.location}")
             else:
-                print(f"\n🌅 ENVIRONMENTAL SCENE")
-                print(f"📍 Location: {scene.location}")
-            print(f"{scene.description}\n")
+                self._status(f"ENVIRONMENTAL SCENE at {scene.location}")
+            self._status(scene.description)
             
-            time.sleep(1)
+            self._sleep(1)
         
         # Step 2: Check for character entries AND exits 
         timeline_context = self.timeline_manager.get_timeline_context(self.timeline, recent_event_count=15)
@@ -200,7 +218,7 @@ class TurnManager:
                 continue
             
             action = "entering" if is_entry else "leaving"
-            print(f"\n👋 {character_name} is {action}...")
+            self._status(f"{character_name} is {action}...")
             
             # Create appropriate event
             if is_entry:
@@ -218,8 +236,8 @@ class TurnManager:
             if is_entry:
                 self.character_manager.broadcast_event_to_characters([character], event)
             
-            print(f"   {Fore.CYAN}{description}{Style.RESET_ALL}")
-            time.sleep(1)
+            self._status(f"   {description}")
+            self._sleep(1)
     
     def select_next_speaker(self) -> Optional[Tuple[Character, str, Optional[str], Optional[str]]]:
         """
@@ -235,7 +253,7 @@ class TurnManager:
         if not recent_events:
             return None
         
-        print("\n🤔 AI characters are thinking...")
+        self._status("AI characters are thinking…")
         
         # Collect decisions from all currently active characters
         active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
@@ -247,7 +265,7 @@ class TurnManager:
         self.characters = original_characters
         
         if not decisions:
-            print("💤 No one wants to speak right now.")
+            self._status("No one wants to speak right now.")
             return None
         
         # Select the speaker
@@ -284,7 +302,7 @@ class TurnManager:
             if result is None:
                 # No one wants to speak - increment silence counter
                 self.consecutive_silence_rounds += 1
-                print(f"🔕 Silence round {self.consecutive_silence_rounds}/2")
+                self._status(f"Silence round {self.consecutive_silence_rounds}/2")
                 
                 # Generate scene event when conversation stalls
                 if self.consecutive_silence_rounds >= 2:
@@ -295,8 +313,7 @@ class TurnManager:
                             recent_event_count=15
                         )
                         
-                        print(f"\n{scene.description}\n")
-                        print("─"*70)
+                        self._status(scene.description)
                         
                         # Add scene to timeline
                         self.timeline_manager.add_event(self.timeline, scene)
@@ -309,11 +326,10 @@ class TurnManager:
                         if self.save_callback:
                             self.save_callback()
                         
-                        time.sleep(2)
+                        self._sleep(2)
                         
                     except Exception as e:
-                        print(f"\nError generating scene event: {e}\n")
-                        print("─"*70)
+                        self._status(f"Error generating scene event: {e}")
                     # Reset silence counter after scene event
                     self.consecutive_silence_rounds = 0
                 
@@ -326,15 +342,15 @@ class TurnManager:
             
             # Prevent the same character from responding twice in a row
             if last_speaker == character.persona.name:
-                print(f"   ⏭️  {character.persona.name} already responded, giving others a chance...")
+                self._status(f"{character.persona.name} already responded, giving others a chance...")
                 continue  # Continue to next iteration instead of breaking, let other characters respond
             
             # Validate that we have dialouge before processing
             if response_type == "speak" and not dialogue:
-                print(f"   ⚠️  {character.persona.name} chose to speak but provided no dialogue, skipping...")
+                self._status(f"{character.persona.name} chose to speak but provided no dialogue, skipping...")
                 continue
             elif response_type == "act" and not action:
-                print(f"   ⚠️  {character.persona.name} chose to act but provided no action, skipping...")
+                self._status(f"{character.persona.name} chose to act but provided no action, skipping...")
                 continue
             
             # Handle different response types
@@ -354,16 +370,11 @@ class TurnManager:
                 active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
                 self.character_manager.broadcast_event_to_characters(active_characters, message_obj)
                 
-                # Print with body language in cyan color if available
-                print(f"\n💬 {character.persona.name}:", end="")
-                if body_language:
-                    print(f" {Fore.CYAN}*{body_language}*{Style.RESET_ALL}")
-                    print(f"   \"{dialogue}\"")
-                else:
-                    print(f" {dialogue}")
+                # Log the spoken message
+                self._status(f"{character.persona.name}: \"{dialogue}\"")
                 
                 responses.append((character, dialogue))
-                
+            
             elif response_type == "act":
                 # For act: dialogue is None, action contains the physical action
                 physical_action = action
@@ -379,16 +390,14 @@ class TurnManager:
                 active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
                 self.character_manager.broadcast_event_to_characters(active_characters, action_obj)
                 
-                # Print action without dialogue
-                print(f"\n👤 {character.persona.name}: {Fore.CYAN}*{physical_action}*{Style.RESET_ALL}")
-                
+                self._status(f"{character.persona.name}: *{physical_action}*")
                 responses.append((character, f"[ACTION: {physical_action}]"))
             
             last_speaker = character.persona.name
             consecutive_count += 1
             
-            # Small delay for readability and to let next character see the context
-            time.sleep(2)
+            # Small delay for readability in terminal mode only
+            self._sleep(2)
         
         # JUDGE EVALUATION: After turn cycle completes, evaluate objectives
         if self.story_manager and responses:
@@ -409,9 +418,7 @@ class TurnManager:
         if self.story_manager.is_story_complete():
             return
         
-        print("\n" + "─"*70)
-        print("⚖️  JUDGE EVALUATION")
-        print("─"*70)
+        self._status("Judge evaluating objectives…")
         
         # Get active characters
         active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
@@ -423,7 +430,6 @@ class TurnManager:
         result = self.story_manager.evaluate_and_assign_objectives(active_characters, self.timeline)
         
         # Process character updates
-        print("\n📋 Character Objective Updates:")
         char_updates = result.get("character_updates", {})
         
         for character in active_characters:
@@ -437,20 +443,12 @@ class TurnManager:
             reasoning = char_update.get("reasoning", "")
             
             if status == "assigned":
-                print(f"   🎯 {char_name}: New objective assigned")
-                print(f"      Objective: \"{new_objective}\"")
-                print(f"      Reasoning: {reasoning}")
+                self._status(f"{char_name}: New objective — {new_objective}")
                 character.state.current_objective = new_objective
             elif status == "completed":
-                print(f"   ✅ {char_name}: Objective completed!")
-                print(f"      New objective: \"{new_objective}\"")
-                print(f"      Reasoning: {reasoning}")
+                self._status(f"{char_name}: Objective completed → {new_objective}")
                 character.state.current_objective = new_objective
             elif status == "continuing":
-                print(f"   ⏳ {char_name}: Continuing current objective")
-                if reasoning:
-                    print(f"      Reasoning: {reasoning}")
-                # Keep current objective (or update if LLM provided one)
                 if new_objective:
                     character.state.current_objective = new_objective
         
@@ -458,31 +456,24 @@ class TurnManager:
         story_complete = result.get("story_objective_complete", False)
         story_reasoning = result.get("reasoning", "")
         
-        print(f"\n📖 Story Objective Status:")
         if story_complete:
-            print(f"   ✅ COMPLETED: {story_reasoning}")
+            self._status(f"Story objective COMPLETED: {story_reasoning}")
             
             # Advance to next objective
             advanced = self.story_manager.advance_story_objective()
             
             if advanced:
                 new_objective = self.story_manager.get_current_objective()
-                print(f"\n🎬 STORY PROGRESSION")
-                print(f"   Moving to next objective:")
-                print(f"   🎯 \"{new_objective}\"")
-                print(f"\n   Character objectives will be reassigned in next turn cycle.")
+                self._status(f"Story advancing → {new_objective}")
                 
                 # Clear current objectives so next cycle will assign new ones
                 for character in active_characters:
                     character.state.current_objective = None
             else:
                 # Story fully complete
-                print(f"\n🎉 STORY COMPLETE!")
-                print(f"   All objectives achieved for: {self.story_manager.story.title}")
+                self._status(f"STORY COMPLETE: {self.story_manager.story.title}")
         else:
-            print(f"   ⏳ In Progress: {story_reasoning}")
-        
-        print("─"*70 + "\n")
+            self._status(f"Story in progress: {story_reasoning}")
         
         # Save after evaluation
         if self.save_callback:

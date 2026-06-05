@@ -1,16 +1,24 @@
+# -*- coding: utf-8 -*-
 """
 Main entry point for the RoleRealm multi-character roleplay system.
 An AI-powered interactive storytelling experience with dynamic conversations.
 """
 
+import sys
+import io
 import time
 from colorama import Fore, Style, init
 from roleplay_system import RoleplaySystem
-from config import Config
+from gemini_client import Config
 from managers.storyManager import StoryManager
 from loaders.character_loader import CharacterLoader
 from loaders.story_loader import StoryLoader
 from data_models import Message, Scene, Action, CharacterEntry, CharacterExit
+
+# Force UTF-8 encoding on Windows
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="backslashreplace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="backslashreplace")
 
 # Initialize colorama for Windows color support
 init(autoreset=True)
@@ -161,15 +169,15 @@ def main():
             
             for event in recent_events:
                 if isinstance(event, Message):
-                    print(f"💬 {event.character}: {event.dialouge[:100]}{'...' if len(event.dialouge) > 100 else ''}")
+                    print(f"💬 {event.character}: {event.dialouge}")
                 elif isinstance(event, Scene):
-                    print(f"🎬 [Scene at {event.location}]: {event.description[:80]}{'...' if len(event.description) > 80 else ''}")
+                    print(f"🎬 [Scene at {event.location}]: {event.description}")
                 elif isinstance(event, Action):
-                    print(f"👤 {event.character}: *{event.description[:80]}{'...' if len(event.description) > 80 else ''}*")
+                    print(f"👤 {event.character}: *{event.description}*")
                 elif isinstance(event, CharacterEntry):
-                    print(f"🚪 → {event.character} entered: {event.description[:80]}{'...' if len(event.description) > 80 else ''}")
+                    print(f"🚪 → {event.character} entered: {event.description}")
                 elif isinstance(event, CharacterExit):
-                    print(f"🚪 ← {event.character} left: {event.description[:80]}{'...' if len(event.description) > 80 else ''}")
+                    print(f"🚪 ← {event.character} left: {event.description}")
             print("="*70)
             print("✨ Ready to continue!\n")
         

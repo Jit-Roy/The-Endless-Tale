@@ -8,8 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from data_models import Story, Character, TimelineHistory
-from config import Config
-from openrouter_client import GenerativeModel
+from gemini_client import Config, GenerativeModel
 from helpers.response_parser import parse_json_response
 from managers.timelineManager import TimelineManager
 

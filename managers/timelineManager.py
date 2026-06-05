@@ -8,8 +8,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from data_models import Message, Scene, Action, TimelineHistory, TimelineEvent, CharacterEntry, CharacterExit
-from config import Config
-from openrouter_client import GenerativeModel
+from gemini_client import Config, GenerativeModel
 from helpers.response_parser import parse_json_response
 
 
@@ -317,8 +316,8 @@ class TimelineManager:
             
             response = self.model.generate_content(prompt, temperature=0.85)
             result = parse_json_response(response.text)
-            location = result.get("location", "Unknown Location").strip()
-            event_desc = result.get("event_description", "").strip()
+            location = (result.get("location") or "Unknown Location").strip()
+            event_desc = (result.get("event_description") or "").strip()
             
             return Scene(
                 scene_type=scene_type,

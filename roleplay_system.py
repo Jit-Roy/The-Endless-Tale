@@ -10,7 +10,7 @@ import json
 from data_models import CharacterPersona, Character, TimelineHistory
 from managers.turn_manager import TurnManager
 from managers.timelineManager import TimelineManager
-from config import Config
+from gemini_client import Config
 
 
 class RoleplaySystem:
@@ -41,13 +41,13 @@ class RoleplaySystem:
             initial_scene_description: Optional initial scene description
             
         Raises:
-            ValueError: If OPENROUTER_API_KEY is not set
+            ValueError: If GOOGLE_API_KEY is not set
         """
         # Configure API with key from Config
-        api_key = Config.OPENROUTER_API_KEY
+        api_key = Config.GOOGLE_API_KEY
         if not api_key:
             raise ValueError(
-                "OPENROUTER_API_KEY not set in environment. "
+                "GOOGLE_API_KEY not set in environment. "
                 "Please set it in your .env file or environment variables."
             )
         
@@ -214,17 +214,17 @@ class RoleplaySystem:
                     present_at_moment.discard(event.character)
             
             print("\n" + "="*70)
-            print("📂 LOADED EXISTING CONVERSATION")
+            print("[LOADED] Existing conversation restored")
             print("="*70)
             print(f"Restored {len(self.timeline.events)} events from previous session")
             print(f"Participants: {', '.join(self.timeline.participants)}")
-            print(f"Continuing from where you left off...")
+            print("Continuing from where you left off...")
             print("="*70 + "\n")
             
             return True
             
         except Exception as e:
-            print(f"\n⚠️  Could not load previous conversation: {e}")
+            print(f"\n[WARNING] Could not load previous conversation: {e}")
             print("Starting fresh conversation instead.\n")
             return False
     
@@ -301,7 +301,7 @@ class RoleplaySystem:
                 json.dump(timeline_data, f, indent=2, ensure_ascii=False)
                 
         except Exception as e:
-            print(f"⚠️  Error saving conversation: {e}")
+            print(f"[WARNING] Error saving conversation: {e}")
     
     def _add_player_message(self, content: str) -> None:
         """Add a player message to the conversation."""
@@ -354,7 +354,7 @@ class RoleplaySystem:
         self.timeline.events.clear()
         
         print("\n" + "="*70)
-        print("🔄 CONVERSATION RESET")
+        print("[RESET] Conversation reset")
         print("="*70)
         print("All previous events have been cleared.")
         print("Starting fresh conversation...")
@@ -392,17 +392,17 @@ have something to say, creating an organic, dynamic storytelling experience!
     
     def display_character_info(self) -> None:
         """Display information about all AI characters."""
-        print("\n📖 CHARACTER INFORMATION:\n")
+        print("\n[INFO] CHARACTER INFORMATION:\n")
         for character in self.ai_characters:
             persona = character.persona
-            print(f"🎭 {persona.name}")
+            print(f"  {persona.name}")
             print(f"   Traits: {', '.join(persona.traits[:3])}...")
             print(f"   Style: {persona.speaking_style[:60]}...")
             print()
     
     def _send_initial_greeting(self) -> None:
         """Send initial greeting message from player."""
-        print(f"\n💬 {self.player_name}: Hello everyone!")
+        print(f"\n[PLAYER] {self.player_name}: Hello everyone!")
         self._add_player_message("Hello everyone!")
         
         # Let AI characters respond (messages are printed inside process_ai_responses)
@@ -420,13 +420,13 @@ have something to say, creating an organic, dynamic storytelling experience!
         """
         # Check for exit commands
         if user_input.lower() in ['quit', 'exit', 'end', 'goodbye']:
-            print("\n👋 Ending roleplay session...")
-            print(f"💾 Chat saved to: {self.get_conversation_file_path()}")
+            print("\n[ENDING] Ending roleplay session...")
+            print(f"[SAVE] Chat saved to: {self.get_conversation_file_path()}")
             return False
         
         # Check for skip command
         if user_input.lower() == 'skip':
-            print("\n⏭️  Letting AI characters continue...")
+            print("\n[SKIP] Letting AI characters continue...")
             ai_responses = self.turn_manager.process_ai_responses(max_turns=5)
             return True
         
@@ -472,8 +472,8 @@ have something to say, creating an organic, dynamic storytelling experience!
                     break
                     
             except KeyboardInterrupt:
-                print("\n\n👋 Interrupted! Ending roleplay...")
-                print(f"💾 Chat saved to: {self.get_conversation_file_path()}")
+                print("\n\n[INTERRUPTED] Ending roleplay...")
+                print(f"[SAVE] Chat saved to: {self.get_conversation_file_path()}")
                 break
             except Exception as e:
-                print(f"\n❌ Error: {str(e)}\n")
+                print(f"\n[ERROR] {str(e)}\n")

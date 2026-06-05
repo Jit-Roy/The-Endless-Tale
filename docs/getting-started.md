@@ -16,7 +16,7 @@ Welcome to RoleRealm! This guide will help you set up and create your first inte
 Before you begin, ensure you have:
 
 - **Python 3.8 or higher** installed on your system
-- An **OpenRouter API key** ([Get one here](https://openrouter.ai/))
+- A **Google Gemini API key** ([Get one here](https://developers.generativeai.google/))
 - Basic familiarity with JSON format
 - A text editor or IDE (VS Code, PyCharm, etc.)
 
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 This will install:
 - `pydantic` - Data validation and settings management
-- `openai` - API client for OpenRouter
+- `google-genai` - Google Gemini API client
 - `python-dotenv` - Environment variable management
 - `colorama` - Colored terminal output
 
@@ -53,10 +53,10 @@ copy NUL .env
 touch .env
 ```
 
-Add your OpenRouter API key:
+Add your Google Gemini API key:
 
 ```
-OPENROUTER_API_KEY=your_api_key_here
+GOOGLE_API_KEY=your_api_key_here
 ```
 
 **Important**: Never commit your `.env` file to version control!
