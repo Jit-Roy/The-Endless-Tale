@@ -4,7 +4,7 @@ Handles ONLY turn decision logic - determines who should speak next.
 All timeline operations are delegated to TimelineManager.
 """
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 import random
 import time
 from typing import List, Optional, Tuple
@@ -160,79 +160,73 @@ class TurnManager:
     
     def _process_meta_narrative_decisions(self) -> None:
         """
-        Process meta-narrative decisions sequentially.
-        
-        Workflow:
-        1. Check if scene transition should happen
-        2. Check for character entries and exits (ONE combined API call)
-        
-        All decisions use full timeline context (not filtered by character memory).
+        Process meta-narrative decisions in a SINGLE unified API call.
+
+        Previously this was two sequential API calls:
+          1. should_generate_scene()       (decide + generate scene)
+          2. decide_character_movements()  (entries / exits)
+
+        Now both are resolved in one LLM call via prepare_turn_context(),
+        which shares the same timeline context and saves one round-trip.
         """
-        # Step 1: Check for scene transition
-        scene_decision = self.timeline_manager.should_generate_scene(self.timeline, recent_event_count=15)
-        if scene_decision:
-            scene_type = scene_decision.get('scene_type', 'environmental')
+        all_character_names = [c.persona.name for c in self.characters]
+
+        # --- Single unified API call ---
+        context = self.timeline_manager.prepare_turn_context(
+            timeline=self.timeline,
+            all_characters=all_character_names,
+            recent_event_count=15
+        )
+
+        # --- Handle scene (if any) ---
+        scene_data = context.get("scene")
+        if scene_data:
+            scene_type = scene_data.get("scene_type", "environmental")
             scene = self.timeline_manager.create_scene(
                 scene_type=scene_type,
-                location=scene_decision['location'],
-                description=scene_decision['event_description']
+                location=scene_data.get("location", "Unknown"),
+                description=scene_data.get("event_description", "")
             )
             self.timeline_manager.add_event(self.timeline, scene)
-            
-            # Broadcast scene to currently active characters only
+
             active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
             self.character_manager.broadcast_event_to_characters(active_characters, scene)
-            
-            # Display scene based on type
-            if scene_type == 'transition':
+
+            if scene_type == "transition":
                 self._status(f"SCENE TRANSITION → {scene.location}")
             else:
                 self._status(f"ENVIRONMENTAL SCENE at {scene.location}")
             self._status(scene.description)
-            
             self._sleep(1)
-        
-        # Step 2: Check for character entries AND exits 
-        timeline_context = self.timeline_manager.get_timeline_context(self.timeline, recent_event_count=15)
-        current_location = self.timeline_manager.get_current_location(self.timeline)
-        all_character_names = [c.persona.name for c in self.characters]
-        
-        entries, exits = self.timeline_manager.decide_character_movements(
-            timeline_context=timeline_context,
-            all_characters=all_character_names,
-            current_participants=self.timeline.current_participants,
-            current_location=current_location or "Unknown"
-        )
-        
-        # Process all character movements (entries and exits) in a single loop
+
+        # --- Handle character movements (entries then exits) ---
+        entries = context.get("entries", [])
+        exits = context.get("exits", [])
+
         for movement_info, is_entry in [(info, True) for info in entries] + [(info, False) for info in exits]:
-            character_name = movement_info.get('character')
-            description = movement_info.get('description')
-            
+            character_name = movement_info.get("character")
+            description = movement_info.get("description")
+
             if not character_name or not description:
                 continue
-            
-            # Find the character object
+
             character = next((c for c in self.characters if c.persona.name == character_name), None)
             if not character:
                 continue
-            
+
             action = "entering" if is_entry else "leaving"
             self._status(f"{character_name} is {action}...")
-            
-            # Create appropriate event
+
             if is_entry:
                 event = CharacterEntry(character=character_name, description=description)
-            else: 
+            else:
                 event = CharacterExit(character=character_name, description=description)
-            
+
             self.timeline_manager.add_event(self.timeline, event)
-            
-            # Broadcast to currently active characters (including the entrant, who is now in
-            # current_participants after add_event updated it above)
+
             active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
             self.character_manager.broadcast_event_to_characters(active_characters, event)
-            
+
             self._status(f"   {description}")
             self._sleep(1)
     
@@ -290,6 +284,8 @@ class TurnManager:
         responses = []
         consecutive_count = 0
         last_speaker = None
+        judge_future: Optional[Future] = None   # tracks the latest speculative judge call
+        _judge_executor: Optional[ThreadPoolExecutor] = None
         
         while consecutive_count < max_turns:
             # Ask ONE character at a time (sequentially, not in parallel)
@@ -393,16 +389,36 @@ class TurnManager:
             last_speaker = character.persona.name
             consecutive_count += 1
             
+            # ── SPECULATIVE JUDGE PREFETCH ─────────────────────────────────────
+            # Fire objective evaluation the moment this winner's response is
+            # committed. It runs while _sleep() and the next select_next_speaker()
+            # are executing — i.e. while the UI is streaming this response.
+            # If a previous judge future is still running, cancel it (stale) and
+            # start a fresh one reflecting the latest timeline state.
+            if self.story_manager:
+                if judge_future is not None and not judge_future.done():
+                    judge_future.cancel()   # best-effort; no harm if it's already running
+                if _judge_executor is not None:
+                    _judge_executor.shutdown(wait=False)
+                _judge_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="judge")
+                judge_future = _judge_executor.submit(self._evaluate_objectives_with_judge)
+                _judge_executor.shutdown(wait=False)
+            # ──────────────────────────────────────────────────────────────────
+            
             # Small delay for readability in terminal mode only
             self._sleep(2)
-        
-        # JUDGE EVALUATION: After turn cycle completes, evaluate objectives
-        if self.story_manager and responses:
-            self._evaluate_objectives_with_judge()
         
         # Save conversation after AI responses if callback is provided
         if responses and self.save_callback:
             self.save_callback()
+        
+        # Wait for the last judge evaluation to finish before returning,
+        # so callers always see fully updated objectives.
+        if judge_future is not None:
+            try:
+                judge_future.result()
+            except Exception as e:
+                self._status(f"⚠️ Judge evaluation error: {e}")
         
         return responses
     
