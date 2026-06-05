@@ -54,96 +54,7 @@ DEFAULT_CONFIG = {
 }
 
 
-# ── Custom tab bar ────────────────────────────────────────────────────────────
-
-class TabBar(QWidget):
-    """Minimal CHAT | TIMELINE | SCENE | MEMORY tab bar."""
-
-    _TABS = ["CHAT", "TIMELINE", "SCENE", "MEMORY"]
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setFixedHeight(44)
-        self.setStyleSheet(f"background-color: {PANEL_BG}; border-bottom: 1px solid {BORDER};")
-        self._active = 0
-
-        self._layout = QHBoxLayout(self)
-        self._layout.setContentsMargins(16, 0, 12, 0)
-        self._layout.setSpacing(0)
-
-        self._tab_labels = []
-        for i, name in enumerate(self._TABS):
-            lbl = self._make_tab(name, i)
-            self._tab_labels.append(lbl)
-            self._layout.addWidget(lbl)
-
-        self._layout.addStretch()
-
-        # VIEW TIMELINE button
-        view_btn = QPushButton("≡  VIEW TIMELINE")
-        view_btn.setFixedHeight(28)
-        view_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #1a1a1a;
-                color: #666666;
-                border: 1px solid #252525;
-                border-radius: 5px;
-                padding: 0px 14px;
-                font-size: 11px;
-                font-weight: bold;
-                font-family: 'Segoe UI', sans-serif;
-                letter-spacing: 0.5px;
-            }}
-            QPushButton:hover {{
-                border-color: #333333;
-                color: #888888;
-            }}
-        """)
-        self._layout.addWidget(view_btn)
-
-    def _make_tab(self, name: str, index: int) -> QLabel:
-        lbl = QLabel(name)
-        lbl.setFixedHeight(44)
-        lbl.setAlignment(Qt.AlignCenter)
-        lbl.setContentsMargins(16, 0, 16, 0)
-        lbl.setCursor(Qt.PointingHandCursor)
-        self._apply_style(lbl, index == 0)
-        lbl.mousePressEvent = lambda _ev, i=index: self._select(i)
-        return lbl
-
-    def _apply_style(self, lbl: QLabel, active: bool):
-        if active:
-            lbl.setStyleSheet(f"""
-                QLabel {{
-                    color: {TAB_ACTIVE};
-                    font-size: 12px;
-                    font-weight: bold;
-                    font-family: 'Segoe UI', sans-serif;
-                    letter-spacing: 1px;
-                    border-bottom: 2px solid {TAB_ACTIVE};
-                    padding-bottom: 0px;
-                }}
-            """)
-        else:
-            lbl.setStyleSheet(f"""
-                QLabel {{
-                    color: {TAB_INACTIVE};
-                    font-size: 12px;
-                    font-family: 'Segoe UI', sans-serif;
-                    letter-spacing: 1px;
-                    border-bottom: 2px solid transparent;
-                }}
-                QLabel:hover {{
-                    color: #888888;
-                }}
-            """)
-
-    def _select(self, index: int):
-        if self._active == index:
-            return
-        self._apply_style(self._tab_labels[self._active], False)
-        self._active = index
-        self._apply_style(self._tab_labels[index], True)
+# (TabBar removed) Top tab bar was decorative/placeholding; removed per request.
 
 
 # ── Main window ───────────────────────────────────────────────────────────────
@@ -213,9 +124,7 @@ class MainWindow(QMainWindow):
         cl.setContentsMargins(0, 0, 0, 0)
         cl.setSpacing(0)
 
-        # Tab bar
-        self._tab_bar = TabBar()
-        cl.addWidget(self._tab_bar)
+        # (Tabs removed) — main canvas will be shown directly
 
         # Chat display
         self._chat = ChatDisplay(player_name=player)
@@ -241,10 +150,7 @@ class MainWindow(QMainWindow):
         # ── Input bar signal wiring ───────────────────────────────────────
         self._input_bar.message_submitted.connect(self._on_player_message)
         self._input_bar.listen_clicked.connect(self._on_listen)
-        self._input_bar.skip_clicked.connect(self._on_skip)
         self._input_bar.progress_clicked.connect(self._on_progress)
-        self._input_bar.info_clicked.connect(self._on_info)
-        self._input_bar.reset_clicked.connect(self._on_reset)
         self._status_panel.save_clicked.connect(self._on_save_session)
 
     # ── Backend / Worker ──────────────────────────────────────────────────
@@ -361,11 +267,6 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def _on_listen(self):
         self._invoke_worker("send_listen")
-
-    @pyqtSlot()
-    def _on_skip(self):
-        self._invoke_worker("send_skip")
-
     @pyqtSlot()
     def _on_progress(self):
         if self._worker and self._worker.story_manager:
@@ -375,74 +276,7 @@ class MainWindow(QMainWindow):
                 return
         self._chat.append_system("No story loaded.")
 
-    @pyqtSlot()
-    def _on_info(self):
-        if not self._worker or not self._worker.system:
-            return
-        lines = []
-        for char in self._worker.system.ai_characters:
-            p = char.persona
-            traits = ", ".join(p.traits[:4]) if p.traits else "—"
-            style  = p.speaking_style[:80] + "…" if len(p.speaking_style) > 80 else p.speaking_style
-            lines += [
-                "═" * 42,
-                f"  {p.name}",
-                f"  Traits: {traits}",
-                f"  Style:  {style}",
-            ]
-            if char.state and char.state.current_objective:
-                lines.append(f"  Goal:   {char.state.current_objective}")
 
-        dlg = QDialog(self)
-        dlg.setWindowTitle("Character Info")
-        dlg.setMinimumSize(520, 360)
-        dlg.setStyleSheet(f"""
-            QDialog {{ background-color: #111111; }}
-            QTextEdit {{
-                background-color: #181818;
-                color: #cccccc;
-                border: 1px solid #222222;
-                font-family: 'Consolas', monospace;
-                font-size: 12px;
-                padding: 10px;
-                border-radius: 6px;
-            }}
-            QDialogButtonBox QPushButton {{
-                background: #1a1a1a;
-                color: #aaaaaa;
-                border: 1px solid #2a2a2a;
-                border-radius: 4px;
-                padding: 5px 18px;
-                font-family: 'Segoe UI', sans-serif;
-            }}
-        """)
-        vl = QVBoxLayout(dlg)
-        te = QTextEdit()
-        te.setReadOnly(True)
-        te.setPlainText("\n".join(lines))
-        bb = QDialogButtonBox(QDialogButtonBox.Close)
-        bb.rejected.connect(dlg.reject)
-        vl.addWidget(te)
-        vl.addWidget(bb)
-        dlg.exec_()
-
-    @pyqtSlot()
-    def _on_reset(self):
-        ans = QMessageBox.question(
-            self, "Reset Conversation",
-            "Reset and delete all conversation history?",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-        )
-        if ans == QMessageBox.Yes:
-            self._chat.clear_display()
-            self._chat.append_event({
-                "type": "scene",
-                "scene_type": "environmental",
-                "location": self._config["scene_location"],
-                "description": self._config["scene_description"],
-                "timestamp": "",
-            })
-            self._invoke_worker("reset_conversation")
 
     @pyqtSlot()
     def _on_save_session(self):

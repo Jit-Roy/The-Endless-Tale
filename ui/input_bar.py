@@ -125,10 +125,7 @@ class InputBar(QWidget):
 
     message_submitted = pyqtSignal(str)
     listen_clicked    = pyqtSignal()
-    skip_clicked      = pyqtSignal()
     progress_clicked  = pyqtSignal()
-    info_clicked      = pyqtSignal()
-    reset_clicked     = pyqtSignal()
 
     def __init__(self, player_name: str = "Player", parent=None):
         super().__init__(parent)
@@ -150,13 +147,9 @@ class InputBar(QWidget):
         btn_row.setContentsMargins(0, 0, 0, 8)
 
         self._btn_listen   = _action_btn("Listen")
-        self._btn_skip     = _action_btn("Skip")
         self._btn_progress = _action_btn("Progress")
-        self._btn_info     = _action_btn("Info")
-        self._btn_reset    = _action_btn("Reset")
 
-        for btn in (self._btn_listen, self._btn_skip,
-                    self._btn_progress, self._btn_info, self._btn_reset):
+        for btn in (self._btn_listen, self._btn_progress):
             btn_row.addWidget(btn)
 
         btn_row.addStretch()
@@ -201,17 +194,9 @@ class InputBar(QWidget):
         ca_layout.addWidget(self._edit)
         box_layout.addWidget(content_area)
 
-        # ── Bottom toolbar: icons + SEND ─────────────────────────────────
+        # ── Bottom toolbar: SEND button + hint ──────────────────────────
         toolbar = QHBoxLayout()
         toolbar.setSpacing(4)
-
-        self._icon_cmd   = _icon_btn(">_",  "Command")
-        self._icon_emoji = _icon_btn("☺",   "Emoji")
-        self._icon_img   = _icon_btn("⊞",   "Attach")
-        toolbar.addWidget(self._icon_cmd)
-        toolbar.addWidget(self._icon_emoji)
-        toolbar.addWidget(self._icon_img)
-        toolbar.addStretch()
 
         # Enter hint
         hint = QLabel("Enter to send")
@@ -261,10 +246,8 @@ class InputBar(QWidget):
         self._btn_send.clicked.connect(self._submit)
 
         self._btn_listen.clicked.connect(self.listen_clicked)
-        self._btn_skip.clicked.connect(self.skip_clicked)
         self._btn_progress.clicked.connect(self.progress_clicked)
-        self._btn_info.clicked.connect(self.info_clicked)
-        self._btn_reset.clicked.connect(self.reset_clicked)
+        
 
     # ── Public API ───────────────────────────────────────────────────────
 
@@ -272,10 +255,7 @@ class InputBar(QWidget):
         self._edit.setEnabled(enabled)
         self._btn_send.setEnabled(enabled)
         self._btn_listen.setEnabled(enabled)
-        self._btn_skip.setEnabled(enabled)
         self._btn_progress.setEnabled(enabled)
-        self._btn_info.setEnabled(enabled)
-        self._btn_reset.setEnabled(enabled)
         if enabled:
             self._focus_input()
 

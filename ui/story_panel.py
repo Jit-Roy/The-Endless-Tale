@@ -271,23 +271,7 @@ class StoryPanel(QWidget):
         scroll.setWidget(body)
         outer.addWidget(scroll, stretch=1)
 
-        # ── Bottom nav ───────────────────────────────────────────────────
-        nav = QWidget()
-        nav.setFixedHeight(50)
-        nav.setStyleSheet(f"background-color: {DARK_BG}; border-top: 1px solid {BORDER};")
-        nl = QHBoxLayout(nav)
-        nl.setContentsMargins(8, 0, 8, 0)
-        nl.setSpacing(0)
-
-        for icon, active in [("📖", True), ("👥", False), ("🕐", False), ("⚙", False)]:
-            btn = QLabel(icon)
-            btn.setAlignment(Qt.AlignCenter)
-            c = "#cccccc" if active else "#363636"
-            btn.setStyleSheet(f"color: {c}; font-size: 15px; padding: 8px 12px;")
-            nl.addWidget(btn)
-
-        nl.addStretch()
-        outer.addWidget(nav)
+        # Bottom nav removed (icons were decorative and unused)
 
     # ── Public API ───────────────────────────────────────────────────────
 

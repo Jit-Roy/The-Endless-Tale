@@ -88,7 +88,6 @@ class RoleplayWorker(QObject):
             self.system = RoleplaySystem(
                 player_name=cfg["player_name"],
                 characters=characters,
-                model_name=Config.DEFAULT_MODEL,
                 chat_storage_dir=base_dir,
                 story_manager=self.story_manager,
                 story_name=base_dir,
@@ -122,17 +121,16 @@ class RoleplayWorker(QObject):
         if not self.system:
             return
         try:
-            self.ai_thinking.emit(True)
             self.status_update.emit(f"You said: {text[:60]}…")
 
+            # Add and emit the player's message first so it appears before the thinking indicator
             self.system._add_player_message(text)
-
-            # Emit the player's own message event immediately
             from data_models import Message
             player_msg = self.system.timeline.events[-1]
             self.event_added.emit(self._serialize_event(player_msg))
 
-            # Run AI responses
+            # Now indicate AI is thinking and run responses
+            self.ai_thinking.emit(True)
             self._run_ai_responses()
 
         except Exception as e:
@@ -174,7 +172,6 @@ class RoleplayWorker(QObject):
         if not self.system:
             return
         try:
-            self.ai_thinking.emit(True)
             self.status_update.emit("Resetting conversation…")
             self.system.reset_conversation()
 
@@ -195,6 +192,8 @@ class RoleplayWorker(QObject):
             player_msg = self.system.timeline.events[-1]
             self.event_added.emit(self._serialize_event(player_msg))
 
+            # Now indicate AI is thinking and run responses
+            self.ai_thinking.emit(True)
             self._run_ai_responses()
             self._emit_characters_updated()
             self._emit_story_updated()
@@ -210,7 +209,6 @@ class RoleplayWorker(QObject):
         if not self.system:
             return
         try:
-            self.ai_thinking.emit(True)
             cfg = self._init_config
             greeting = cfg.get("initial_greeting", "Hello everyone!")
 
@@ -220,6 +218,8 @@ class RoleplayWorker(QObject):
             player_msg = self.system.timeline.events[-1]
             self.event_added.emit(self._serialize_event(player_msg))
 
+            # Indicate AI is thinking and run responses
+            self.ai_thinking.emit(True)
             self._run_ai_responses()
             self._emit_characters_updated()
             self._emit_story_updated()
