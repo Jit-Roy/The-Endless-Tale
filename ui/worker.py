@@ -80,7 +80,7 @@ class RoleplayWorker(QObject):
             self.status_update.emit("Loading characters…")
             from loaders.character_loader import CharacterLoader
             character_loader = CharacterLoader(base_dir)
-            characters = character_loader.load_multiple_characters(cfg["character_files"])
+            characters = character_loader.load_characters(cfg["character_files"])
             self.status_update.emit(f"Loaded {len(characters)} characters")
 
             # Build system

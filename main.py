@@ -39,14 +39,6 @@ def display_welcome(player_name: str, character_names: list):
     """Display the welcome message for the roleplay session."""
     char_list = " and ".join(character_names)
     welcome = f"""
-╔══════════════════════════════════════════════════════════════════════╗
-║                                                                      ║
-║                      🎭 ROLEREALM SYSTEM 🎭                         ║
-║                                                                      ║
-║                  Interactive AI-Powered Roleplay                     ║
-║                                                                      ║
-╚══════════════════════════════════════════════════════════════════════╝
-
 You are playing as {player_name.upper()}, joined by {char_list}.
 
 The story unfolds naturally through your conversations! Characters have objectives
@@ -92,7 +84,7 @@ def main():
     try:
         story_loader = StoryLoader(BASE_DIR)
         story_arc = story_loader.load_story()
-        print(f"   ✓ Loaded: {story_arc.title}\n")
+        print(f"✓ Loaded: {story_arc.title}\n")
     except Exception as e:
         print(f"❌ Error loading story: {e}")
         print("❌ Could not load story. Continuing without story progression.")
@@ -105,7 +97,7 @@ def main():
     print("\n🔮 Loading characters...")
     try:
         character_loader = CharacterLoader(BASE_DIR)
-        characters = character_loader.load_multiple_characters(CHARACTER_FILES)
+        characters = character_loader.load_characters(CHARACTER_FILES)
         for char in characters:
             print(f"✨ {char.name} has joined")
         print()

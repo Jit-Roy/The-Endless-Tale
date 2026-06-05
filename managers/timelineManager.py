@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from data_models import Message, Scene, Action, TimelineHistory, TimelineEvent, CharacterEntry, CharacterExit
-from gemini_client import Config, GenerativeModel
+from gemini_client import GenerativeModel
 from helpers.response_parser import parse_json_response
 
 
@@ -17,8 +17,7 @@ class TimelineManager:
     
     def __init__(self):
         """Initialize TimelineManager."""
-        self.model_name = Config.DEFAULT_MODEL
-        self.model = GenerativeModel(self.model_name)
+        self.model = GenerativeModel()
 
     # ========== Timeline Operations ==========
     

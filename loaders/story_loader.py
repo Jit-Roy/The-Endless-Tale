@@ -4,7 +4,6 @@ Story loader module for loading story configurations from JSON files.
 
 import json
 from pathlib import Path
-import uuid
 from data_models import Story
 
 
@@ -58,8 +57,6 @@ class StoryLoader:
             with open(filepath, 'r', encoding='utf-8') as f:
                 story_data = json.load(f)
             
-            # No beat processing needed - just load the story with objectives
-            # Ensure current_objective_index exists
             if "current_objective_index" not in story_data:
                 story_data["current_objective_index"] = 0
             
@@ -70,31 +67,3 @@ class StoryLoader:
             raise ValueError(f"Invalid JSON in {filepath}: {e}")
         except Exception as e:
             raise ValueError(f"Error loading story from {filepath}: {e}")
-
-
-    def get_story_file_name(base_dir: str) -> str:
-        """
-        Get the name of the story file in the directory.
-        
-        Args:
-            base_dir: Base story directory (e.g., 'D:\RoleRealm\Pirate Adventure')
-            
-        Returns:
-            Name of the story file (with .json extension)
-            
-        Raises:
-            FileNotFoundError: If no story file found
-            ValueError: If multiple story files found
-        """
-        story_dir = Path(base_dir) / "story"
-        story_files = list(story_dir.glob("*.json"))
-        
-        if len(story_files) == 0:
-            raise FileNotFoundError(f"No story file found in: {story_dir}")
-        elif len(story_files) > 1:
-            raise ValueError(
-                f"Multiple story files found in {story_dir}. "
-                f"Only one story file is allowed: {[f.name for f in story_files]}"
-            )
-        
-        return story_files[0].name

@@ -6,7 +6,7 @@ import json
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from data_models import CharacterPersona, Message, Character, CharacterMemory, CharacterState, TimelineEvent, Scene, Action, CharacterEntry, CharacterExit
-from gemini_client import Config, GenerativeModel
+from gemini_client import GenerativeModel
 from helpers.response_parser import parse_json_response
 
 
@@ -15,8 +15,7 @@ class CharacterManager:
     
     def __init__(self):
         """Initialize CharacterManager."""
-        self.model_name = Config.DEFAULT_MODEL
-        self.model = GenerativeModel(self.model_name)
+        self.model = GenerativeModel()
     
     def create_character(
         self, 

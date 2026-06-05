@@ -15,8 +15,6 @@ class Config:
     DEFAULT_MODEL: str = "gemma-4-31b-it"
     MODEL_TEMPERATURE: float = 0.7
     MAX_TOKENS: int = 1024
-    RESPONSE_TIMEOUT: int = 20
-    DEFAULT_CONTEXT_WINDOW: int = 100
     MAX_CONSECUTIVE_AI_TURNS: int = 3
     PRIORITY_RANDOMNESS: float = 0.1
     CHAT_STORAGE_DIR: str = "Chat_Logs"

@@ -4,7 +4,6 @@ Character loader module for loading character personas from JSON files.
 
 import json
 from pathlib import Path
-from typing import Optional
 from data_models import CharacterPersona
 
 
@@ -64,7 +63,7 @@ class CharacterLoader:
         except Exception as e:
             raise ValueError(f"Error loading character from {filepath}: {e}")
     
-    def load_multiple_characters(self, character_names: list[str]) -> list[CharacterPersona]:
+    def load_characters(self, character_names: list[str]) -> list[CharacterPersona]:
         """
         Load multiple character personas from JSON files.
         

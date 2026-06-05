@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from data_models import Story, Character, TimelineHistory
-from gemini_client import Config, GenerativeModel
+from gemini_client import GenerativeModel
 from helpers.response_parser import parse_json_response
 from managers.timelineManager import TimelineManager
 
@@ -24,7 +24,7 @@ class StoryManager:
             story: The story to manage
         """
         self.story = story
-        self.model = GenerativeModel(Config.DEFAULT_MODEL)
+        self.model = GenerativeModel()
     
     def get_current_objective(self) -> Optional[str]:
         """Get the current story objective."""
