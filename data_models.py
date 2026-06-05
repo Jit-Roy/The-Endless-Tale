@@ -122,10 +122,7 @@ class CharacterPersona(BaseModel):
         default=0.9,
         description="Top-p sampling for this character"
     )
-    frequency_penalty: Optional[float] = Field(
-        default=0.2,
-        description="Frequency penalty for this character (affects repetition)"
-    )
+
 
 class CharacterMemory(BaseModel):
     """

@@ -9,7 +9,7 @@ from typing import Dict, Any
 
 
 def _extract_json_block(text: str) -> str:
-    """Extract the first JSON object or array block from the text."""
+    """Extract the first balanced JSON object or array block from the text."""
     brace_start = text.find("{")
     bracket_start = text.find("[")
     if brace_start == -1 and bracket_start == -1:
@@ -17,22 +17,49 @@ def _extract_json_block(text: str) -> str:
 
     if brace_start == -1:
         start = bracket_start
+        start_char = "["
         end_char = "]"
     elif bracket_start == -1:
         start = brace_start
+        start_char = "{"
         end_char = "}"
     else:
         if brace_start < bracket_start:
             start = brace_start
+            start_char = "{"
             end_char = "}"
         else:
             start = bracket_start
+            start_char = "["
             end_char = "]"
 
-    end = text.rfind(end_char)
-    if end == -1 or end <= start:
-        return text
-    return text[start:end + 1]
+    depth = 0
+    in_string = False
+    escape = False
+
+    for index in range(start, len(text)):
+        char = text[index]
+
+        if escape:
+            escape = False
+            continue
+        if char == "\\":
+            escape = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+
+        if char == start_char:
+            depth += 1
+        elif char == end_char:
+            depth -= 1
+            if depth == 0:
+                return text[start:index + 1]
+
+    return text
 
 
 def _repair_json_text(text: str) -> str:

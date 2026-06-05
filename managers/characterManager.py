@@ -310,8 +310,7 @@ class CharacterManager:
             response = self.model.generate_content(
                 prompt, 
                 temperature=character.persona.temperature, 
-                top_p=character.persona.top_p, 
-                frequency_penalty=character.persona.frequency_penalty
+                top_p=character.persona.top_p
             )
             
             # Parse JSON response
