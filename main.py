@@ -13,8 +13,8 @@ from data_models import Message, Scene, Action, CharacterEntry, CharacterExit
 
 # Force UTF-8 encoding on Windows
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="backslashreplace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="backslashreplace")
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="backslashreplace", line_buffering=True)
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="backslashreplace", line_buffering=True)
 
 
 def main():
@@ -124,7 +124,7 @@ def main():
                 print("\n" + "─"*70)
                 user_input = input(f"⚡ {PLAYER_NAME}: ").strip()
 
-                if user_input and user_input.lower() not in ['skip', 'progress', 'exit']:
+                if user_input and user_input.lower() not in ['listen', 'progress', 'exit']:
                     player_messages_count += 1
 
                 # progress ────────────────────────────────────────────────────
@@ -146,11 +146,18 @@ def main():
                         )
                     continue
 
+
                 # exit ─────────────────────────────────────────────────
                 if user_input.lower() in ['exit']:
                     print("\n[ENDING] Ending roleplay session...")
                     print(f"💾 Chat saved to: {system.get_conversation_file_path()}")
                     break
+
+                # player message ─────────────────────────────────────────────
+                if user_input:
+                    system._add_player_message(user_input)
+                    system.turn_manager.process_ai_responses()
+                    continue
 
             except KeyboardInterrupt:
                 print("\n\n👋 Interrupted! Ending roleplay...")

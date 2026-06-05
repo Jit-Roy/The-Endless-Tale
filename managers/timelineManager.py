@@ -313,7 +313,7 @@ class TimelineManager:
                 "event_description": "A sudden gust of ice-cold wind tears through the library, extinguishing half the lights. Pages flutter wildly as a single ancient tome slides off a high shelf and crashes open on the table between them—landing on a page marked with a glowing symbol."
                 }}"""
             
-            response = self.model.generate_content(prompt, temperature=0.85)
+            response = self.model.generate_content(prompt)
             result = parse_json_response(response.text)
             location = (result.get("location") or "Unknown Location").strip()
             event_desc = (result.get("event_description") or "").strip()
@@ -404,11 +404,7 @@ class TimelineManager:
         Decide now based on the timeline above."""
         
         try:
-            response = self.model.generate_content(
-                prompt,
-                temperature=0.8,
-                max_tokens=300
-            )
+            response = self.model.generate_content(prompt)
             
             try:
                 scene_data = parse_json_response(response.text)
@@ -610,7 +606,7 @@ class TimelineManager:
         Keep it brief but capture the essence of what happened."""
 
         try:
-            response = self.model.generate_content(prompt, temperature=0.7)
+            response = self.model.generate_content(prompt)
             summary_data = parse_json_response(response.text)
             summary = summary_data.get("summary", "Unable to generate summary.")
             timeline.timeline_summary = summary
