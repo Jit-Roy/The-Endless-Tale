@@ -410,7 +410,10 @@ class TimelineManager:
                 max_tokens=300
             )
             
-            scene_data = parse_json_response(response.text)
+            try:
+                scene_data = parse_json_response(response.text)
+            except ValueError:
+                return None
             
             if scene_data.get("scene_generated", False):
                 return {
