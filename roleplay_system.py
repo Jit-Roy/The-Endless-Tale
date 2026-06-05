@@ -217,8 +217,7 @@ class RoleplaySystem:
     
     def _save_conversation(self) -> None:
         """Save the current conversation to a JSON file in TimelineHistory format."""
-        filename = "group_chat.json"
-        filepath = self.chat_storage_dir / filename
+        filepath = self.get_conversation_file_path()
         
         try:
             from data_models import Message, Scene, Action

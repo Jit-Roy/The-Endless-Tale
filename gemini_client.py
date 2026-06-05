@@ -30,7 +30,17 @@ class GenerativeResponse:
 
 
 class GenerativeModel:
-    """Stateful model wrapper for Google Gemini with persistent chat history."""
+    """Stateless model wrapper for Google Gemini.
+
+    Each call to generate_content() is a fresh, independent request.
+    Context is passed explicitly via the prompt (and system_instruction for
+    the persona) — the SDK accumulates no history between calls.
+
+    This is intentional: the roleplay system manages all conversation context
+    itself via timeline events and memory_context, so letting the SDK also
+    accumulate history would cause every prior memory_context to be re-sent
+    on every subsequent turn (double-feeding).
+    """
 
     def __init__(
         self,
@@ -52,7 +62,9 @@ class GenerativeModel:
 
         self._client = Client(api_key=self.api_key)
 
-        # Build generation config once, reuse across all turns
+        # Config is built once and reused on every stateless call.
+        # system_instruction carries the character persona so it never needs
+        # to be repeated inside the prompt body.
         self._gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=temperature,
@@ -60,62 +72,22 @@ class GenerativeModel:
             top_p=top_p,
         )
 
-        # Single chat session shared across all generate_content() calls
-        self._chat = self._client.chats.create(
-            model=self.model_name,
-            config=self._gen_config,
-        )
+    def generate_content(self, prompt: str) -> GenerativeResponse:
+        """Send a stateless request and return the model's reply.
 
-    def generate_content(self, prompt: str, **kwargs) -> GenerativeResponse:
-        """Send a message and return the model's reply.
-        
-        Automatically retries up to 2 times on empty responses before raising.
+        Each call is completely independent — no session history is kept.
+        Retries up to 2 times on empty responses before raising.
         """
         max_retries = 2
-        last_exc: Exception = None
 
         for attempt in range(max_retries + 1):
             try:
-                if kwargs:
-                    # Override config for this turn only, but keep the same chat session
-                    config = types.GenerateContentConfig(
-                        system_instruction=self._gen_config.system_instruction,
-                        temperature=kwargs.get('temperature', self._gen_config.temperature),
-                        max_output_tokens=kwargs.get('max_tokens', self._gen_config.max_output_tokens),
-                        top_p=kwargs.get('top_p', self._gen_config.top_p),
-                    )
-                    response = self._chat.send_message(prompt, config=config)
-                else:
-                    response = self._chat.send_message(prompt)
-
-                text = getattr(response, 'text', None)
-                if text is None:
-                    if hasattr(response, 'message'):
-                        text = getattr(response.message, 'content', None) or getattr(response.message, 'text', None)
-                    if text is None and hasattr(response, 'output'):
-                        output_items = getattr(response, 'output', []) or []
-                        parts = []
-                        for item in output_items:
-                            contents = getattr(item, 'content', []) or []
-                            for part in contents:
-                                if hasattr(part, 'text') and part.text:
-                                    parts.append(part.text)
-                        text = ''.join(parts) if parts else None
-                    if text is None and hasattr(response, 'choices'):
-                        choices = getattr(response, 'choices', []) or []
-                        if choices:
-                            message = getattr(choices[0], 'message', None)
-                            if message is not None:
-                                text = getattr(message, 'content', None) or getattr(message, 'text', None)
-
-                if text is None or text.strip() == '':
-                    # Empty response — retry if attempts remain
-                    last_exc = ValueError("Google Gemini returned an empty response text.")
-                    if attempt < max_retries:
-                        continue
-                    raise last_exc
-
-                return GenerativeResponse(text)
+                response = self._client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                    config=self._gen_config,
+                )
+                text = response.text
 
             except Exception as e:
                 error_msg = str(e)
@@ -123,12 +95,12 @@ class GenerativeModel:
                     raise Exception(f"ResourceExhausted: Rate limit exceeded. {error_msg}")
                 elif "401" in error_msg or "invalid" in error_msg.lower():
                     raise Exception(f"InvalidAPIKey: {error_msg}")
-                # For other exceptions re-raise immediately (no benefit retrying)
                 raise
 
-    def reset_chat(self):
-        """Start a fresh conversation while keeping the same config."""
-        self._chat = self._client.chats.create(
-            model=self.model_name,
-            config=self._gen_config,
-        )
+            # Handle empty response outside the try block — clean retry flow
+            if not text or not text.strip():
+                if attempt < max_retries:
+                    continue
+                raise ValueError("Gemini returned an empty response after retries.")
+
+            return GenerativeResponse(text)

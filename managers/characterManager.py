@@ -14,8 +14,33 @@ class CharacterManager:
     """Manager for character-related operations."""
     
     def __init__(self):
-        """Initialize CharacterManager."""
-        self.model = GenerativeModel()
+        """Initialize CharacterManager.
+        
+        Each character gets its own dedicated GenerativeModel (one chat session)
+        created lazily on first use, with the character's persona baked in as
+        system_instruction — set once, never repeated in every prompt.
+        """
+        # One chat session per character, keyed by name. Created in _get_or_create_model().
+        self._character_models: Dict[str, GenerativeModel] = {}
+
+    def _get_or_create_model(self, character: Character) -> GenerativeModel:
+        """Return the dedicated GenerativeModel for this character.
+
+        Creates it on first call with:
+        - system_instruction = full persona (traits, background, relationships, goals)
+        - temperature / top_p   = character-specific values
+
+        All subsequent calls reuse the same chat session, so the SDK naturally
+        accumulates turn history without any manual tracking on our side.
+        """
+        name = character.persona.name
+        if name not in self._character_models:
+            self._character_models[name] = GenerativeModel(
+                system_instruction=self.build_persona_context(character),
+                temperature=character.persona.temperature,
+                top_p=character.persona.top_p,
+            )
+        return self._character_models[name]
     
     def create_character(
         self, 
@@ -174,13 +199,12 @@ class CharacterManager:
             The complete prompt string 
         """ 
 
-        persona_context = self.build_persona_context(character)
-        state_context = self.build_state_context(character)
+        # Persona is already in the model's system_instruction — don't repeat it here.
+        state_context = self.build_state_context(character) or " None"
         memory_context = self.build_memory_context(character, last_n_messages=10)
-        
-        prompt = f"""{persona_context}{state_context}
-        WHAT YOU EXPERIENCED (your perspective):
-        {memory_context}
+
+        prompt = f"""CURRENT STATE:{state_context}
+        WHAT YOU EXPERIENCED (your perspective): {memory_context}
         DECISION:
         Based on YOUR experiences, YOUR traits, and YOUR current state, decide how you want to respond right now.
         
@@ -306,12 +330,8 @@ class CharacterManager:
             # Build prompt from THIS character's perspective
             prompt = self.build_decision_prompt(character)
             
-            # Generate with character's unique settings
-            response = self.model.generate_content(
-                prompt, 
-                temperature=character.persona.temperature, 
-                top_p=character.persona.top_p
-            )
+            # Use this character's dedicated session (temperature/top_p already set at creation)
+            response = self._get_or_create_model(character).generate_content(prompt)
             
             # Parse JSON response
             decision_data = parse_json_response(response.text)
