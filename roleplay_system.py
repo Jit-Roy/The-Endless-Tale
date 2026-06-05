@@ -20,11 +20,10 @@ class RoleplaySystem:
         self,
         player_name: str,
         characters: List[CharacterPersona],
-        model_name: str = None,
         chat_storage_dir: str = None,
         story_manager = None,
         story_name: str = "default",
-        initial_location: str = "Common Room",
+        initial_location: str = None,
         initial_scene_description: str = None
     ):
         """
@@ -33,7 +32,6 @@ class RoleplaySystem:
         Args:
             player_name: Name of the human player
             characters: List of character personas for AI characters
-            model_name: Gemini model to use for all characters (defaults to Config.DEFAULT_MODEL)
             chat_storage_dir: Directory to store chat logs (defaults to Config.CHAT_STORAGE_DIR)
             story_manager: Optional StoryManager for narrative progression
             story_name: Name of the story (used for unique conversation filenames)
@@ -43,16 +41,8 @@ class RoleplaySystem:
         Raises:
             ValueError: If GOOGLE_API_KEY is not set
         """
-        # Configure API with key from Config
-        api_key = Config.GOOGLE_API_KEY
-        if not api_key:
-            raise ValueError(
-                "GOOGLE_API_KEY not set in environment. "
-                "Please set it in your .env file or environment variables."
-            )
         
         self.player_name = player_name
-        self.model_name = model_name or Config.DEFAULT_MODEL
         self.story_name = story_name
         
         # Import character manager early to create characters properly
@@ -364,30 +354,21 @@ class RoleplaySystem:
         """Display welcome message with character information."""
         char_names = ", ".join([char.persona.name for char in self.ai_characters])
         
-        welcome = f"""
-╔══════════════════════════════════════════════════════════════════════╗
-║                                                                      ║
-║                      🎭 ROLEREALM SYSTEM 🎭                         ║
-║                                                                      ║
-║                  Interactive AI-Powered Roleplay                     ║
-║                                                                      ║
-╚══════════════════════════════════════════════════════════════════════╝
+        welcome = f"""You are playing as {self.player_name.upper()}, joined by {char_names}.
 
-You are playing as {self.player_name.upper()}, joined by {char_names}.
+        The conversation will flow naturally - AI characters will respond when they
+        have something to say, creating an organic, dynamic storytelling experience!
 
-The conversation will flow naturally - AI characters will respond when they
-have something to say, creating an organic, dynamic storytelling experience!
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        📜 COMMANDS:
+        • Just type naturally to speak as {self.player_name}
+        • 'skip' - Let AI characters continue talking without you
+        • 'info' - See character details
+        • 'quit' or 'exit' - End the roleplay session
 
-📜 COMMANDS:
-   • Just type naturally to speak as {self.player_name}
-   • 'skip' - Let AI characters continue talking without you
-   • 'info' - See character details
-   • 'quit' or 'exit' - End the roleplay session
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        """
         print(welcome)
     
     def display_character_info(self) -> None:
@@ -399,81 +380,3 @@ have something to say, creating an organic, dynamic storytelling experience!
             print(f"   Traits: {', '.join(persona.traits[:3])}...")
             print(f"   Style: {persona.speaking_style[:60]}...")
             print()
-    
-    def _send_initial_greeting(self) -> None:
-        """Send initial greeting message from player."""
-        print(f"\n[PLAYER] {self.player_name}: Hello everyone!")
-        self._add_player_message("Hello everyone!")
-        
-        # Let AI characters respond (messages are printed inside process_ai_responses)
-        ai_responses = self.turn_manager.process_ai_responses()
-    
-    def _handle_player_input(self, user_input: str) -> bool:
-        """
-        Handle player input and return whether to continue.
-        
-        Args:
-            user_input: The player's input string
-            
-        Returns:
-            True to continue the conversation, False to exit
-        """
-        # Check for exit commands
-        if user_input.lower() in ['quit', 'exit', 'end', 'goodbye']:
-            print("\n[ENDING] Ending roleplay session...")
-            print(f"[SAVE] Chat saved to: {self.get_conversation_file_path()}")
-            return False
-        
-        # Check for skip command
-        if user_input.lower() == 'skip':
-            print("\n[SKIP] Letting AI characters continue...")
-            ai_responses = self.turn_manager.process_ai_responses(max_turns=5)
-            return True
-        
-        # Check for info command
-        if user_input.lower() in ['info', 'characters', 'help']:
-            self.display_character_info()
-            return True
-        
-        # Skip empty inputs
-        if not user_input:
-            return True
-        
-        # Add player message and let AI respond (messages are printed inside process_ai_responses)
-        self._add_player_message(user_input)
-        ai_responses = self.turn_manager.process_ai_responses()
-        
-        return True
-    
-    def run(self, show_char_info: bool = False) -> None:
-        """
-        Run the interactive roleplay session.
-        
-        Args:
-            show_char_info: Whether to display character information at start
-        """
-        self.display_welcome()
-        
-        if show_char_info:
-            self.display_character_info()
-        
-        # Send initial greeting
-        self._send_initial_greeting()
-        
-        # Main conversation loop
-        while True:
-            try:
-                # Get player input
-                user_input = input(f"\n⚡ {self.player_name}: ").strip()
-                
-                # Handle input and check if should continue
-                should_continue = self._handle_player_input(user_input)
-                if not should_continue:
-                    break
-                    
-            except KeyboardInterrupt:
-                print("\n\n[INTERRUPTED] Ending roleplay...")
-                print(f"[SAVE] Chat saved to: {self.get_conversation_file_path()}")
-                break
-            except Exception as e:
-                print(f"\n[ERROR] {str(e)}\n")
