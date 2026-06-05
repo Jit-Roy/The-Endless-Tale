@@ -37,9 +37,6 @@ class RoleplaySystem:
             story_name: Name of the story (used for unique conversation filenames)
             initial_location: Starting location for the conversation
             initial_scene_description: Optional initial scene description
-            
-        Raises:
-            ValueError: If GOOGLE_API_KEY is not set
         """
         
         self.player_name = player_name
@@ -93,8 +90,8 @@ class RoleplaySystem:
         self.chat_storage_dir = Path(chat_storage_dir or Config.CHAT_STORAGE_DIR)
         self.chat_storage_dir.mkdir(exist_ok=True)
         
-        # Try to load existing conversation
-        self._load_conversation_if_exists()
+        # Try to load existing conversation; store result so callers can branch on it
+        self.is_loaded_from_save = self._load_conversation_if_exists()
     
     def _load_conversation_if_exists(self) -> bool:
         """
@@ -328,27 +325,7 @@ class RoleplaySystem:
         # Use story name to create unique conversation file
         safe_story_name = self.story_name.lower().replace(" ", "_")
         return self.chat_storage_dir / f"{safe_story_name}_chat.json"
-    
-    def reset_conversation(self) -> None:
-        """
-        Reset the conversation to start fresh.
-        Deletes the saved file and clears current messages.
-        """
-        filepath = self.get_conversation_file_path()
-        
-        # Delete saved file if it exists
-        if filepath.exists():
-            filepath.unlink()
-        
-        # Clear current timeline events
-        self.timeline.events.clear()
-        
-        print("\n" + "="*70)
-        print("[RESET] Conversation reset")
-        print("="*70)
-        print("All previous events have been cleared.")
-        print("Starting fresh conversation...")
-        print("="*70 + "\n")
+
     
     def display_welcome(self) -> None:
         """Display welcome message with character information."""
@@ -370,13 +347,3 @@ class RoleplaySystem:
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         """
         print(welcome)
-    
-    def display_character_info(self) -> None:
-        """Display information about all AI characters."""
-        print("\n[INFO] CHARACTER INFORMATION:\n")
-        for character in self.ai_characters:
-            persona = character.persona
-            print(f"  {persona.name}")
-            print(f"   Traits: {', '.join(persona.traits[:3])}...")
-            print(f"   Style: {persona.speaking_style[:60]}...")
-            print()

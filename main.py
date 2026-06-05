@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Main entry point for the RoleRealm multi-character roleplay system.
 An AI-powered interactive storytelling experience with dynamic conversations.
@@ -6,9 +5,7 @@ An AI-powered interactive storytelling experience with dynamic conversations.
 
 import sys
 import io
-from colorama import Fore, Style, init
 from roleplay_system import RoleplaySystem
-from gemini_client import Config
 from managers.storyManager import StoryManager
 from loaders.character_loader import CharacterLoader
 from loaders.story_loader import StoryLoader
@@ -19,14 +16,10 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="backslashreplace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="backslashreplace")
 
-# Initialize colorama for Windows color support
-init(autoreset=True)
-
 
 def main():
     """Main entry point for the roleplay system."""
 
-    # ── Configuration ─────────────────────────────────────────────────────────
     BASE_DIR          = "Pirate Adventure"
     PLAYER_NAME       = "Henry"
     CHARACTER_FILES   = ["marina", "jack", "captain"]
@@ -49,7 +42,6 @@ def main():
         print(f"✓ Loaded: {story_arc.title}\n")
     except Exception as e:
         print(f"❌ Error loading story: {e}")
-        print("❌ Could not load story. Continuing without story progression.")
         story_arc = None
 
     story_manager = StoryManager(story_arc) if story_arc else None
@@ -64,7 +56,6 @@ def main():
         print()
     except Exception as e:
         print(f"❌ Error loading characters: {e}")
-        print(f"Please make sure character JSON files exist in the '{BASE_DIR}/characters' folder.")
         return
 
     # ── Initialise the roleplay system ────────────────────────────────────────
@@ -79,13 +70,9 @@ def main():
             initial_scene_description=SCENE_DESCRIPTION,
         )
 
-        # RoleplaySystem.display_welcome() prints the banner + commands list
         system.display_welcome()
 
-        # Check if we resumed an existing conversation or are starting fresh
-        is_continuing = len(system.timeline.events) > 1  # more than just the initial scene
-
-        if not is_continuing:
+        if not system.is_loaded_from_save:
             # ── New conversation ──────────────────────────────────────────────
             print("\n" + "="*70)
             print(f"🎬 SCENE: {SCENE_TITLE.upper()}")
@@ -128,7 +115,6 @@ def main():
                 elif isinstance(event, CharacterExit):
                     print(f"🚪 ← {event.character} left: {event.description}")
             print("="*70)
-            print("✨ Ready to continue!\n")
 
         # ── Main conversation loop ────────────────────────────────────────────
         player_messages_count = 0
@@ -138,10 +124,7 @@ def main():
                 print("\n" + "─"*70)
                 user_input = input(f"⚡ {PLAYER_NAME}: ").strip()
 
-                # Track player messages
-                if user_input and user_input.lower() not in [
-                    'listen', 'skip', 'progress', 'info', 'quit', 'exit', 'reset'
-                ]:
+                if user_input and user_input.lower() not in ['skip', 'progress', 'exit']:
                     player_messages_count += 1
 
                 # progress ────────────────────────────────────────────────────
@@ -149,7 +132,7 @@ def main():
                     if story_manager:
                         print(story_manager.get_progress_summary())
                     else:
-                        print("\n⚠️  No story loaded.")
+                        print("\nNo story loaded.")
                     continue
 
                 # listen ──────────────────────────────────────────────────────
@@ -163,59 +146,11 @@ def main():
                         )
                     continue
 
-                # reset ───────────────────────────────────────────────────────
-                if user_input.lower() == 'reset':
-                    confirm = input(
-                        "\n⚠️  Are you sure you want to reset? "
-                        "This will delete all conversation history. (yes/no): "
-                    ).strip().lower()
-                    if confirm in ['yes', 'y']:
-                        system.reset_conversation()
-                        # Redisplay scene and re-add it to the timeline
-                        print("\n" + "="*70)
-                        print(f"🎬 SCENE: {SCENE_TITLE.upper()}")
-                        print("="*70)
-                        print(f"\n📍 Location: {SCENE_LOCATION}")
-                        print(f"\n📖 Setting:\n   {SCENE_DESCRIPTION}")
-                        print("\n" + "="*70 + "\n")
-                        initial_scene = system.timeline_manager.create_scene(
-                            scene_type="environmental",
-                            location=SCENE_LOCATION,
-                            description=SCENE_DESCRIPTION,
-                        )
-                        system.timeline_manager.add_event(system.timeline, initial_scene)
-                        print(f"\n💬 {PLAYER_NAME}: {INITIAL_GREETING}")
-                        system._add_player_message(INITIAL_GREETING)
-                        system.turn_manager.process_ai_responses()
-                        player_messages_count = 0
-                    else:
-                        print("\n✅ Reset cancelled. Continuing conversation...")
-                    continue
-
-                # quit / exit ─────────────────────────────────────────────────
-                if user_input.lower() in ['quit', 'exit', 'end', 'goodbye']:
+                # exit ─────────────────────────────────────────────────
+                if user_input.lower() in ['exit']:
                     print("\n[ENDING] Ending roleplay session...")
                     print(f"💾 Chat saved to: {system.get_conversation_file_path()}")
                     break
-
-                # skip ────────────────────────────────────────────────────────
-                if user_input.lower() == 'skip':
-                    print("\n[SKIP] Letting AI characters continue...")
-                    system.turn_manager.process_ai_responses(max_turns=5)
-                    continue
-
-                # info ────────────────────────────────────────────────────────
-                if user_input.lower() in ['info', 'characters', 'help']:
-                    system.display_character_info()
-                    continue
-
-                # empty input ─────────────────────────────────────────────────
-                if not user_input:
-                    continue
-
-                # normal dialogue ─────────────────────────────────────────────
-                system._add_player_message(user_input)
-                system.turn_manager.process_ai_responses()
 
             except KeyboardInterrupt:
                 print("\n\n👋 Interrupted! Ending roleplay...")
@@ -226,14 +161,9 @@ def main():
                 print("Please try again or type 'quit' to exit.")
 
     except ValueError as e:
-        print(f"\n❌ Configuration Error: {e}")
-        print("\nPlease make sure you have set up your GOOGLE_API_KEY in a .env file.")
-        print("Example .env file content:")
-        print("  GOOGLE_API_KEY=your_api_key_here")
+        print(f"\nConfiguration Error: {e}")
     except Exception as e:
-        print(f"\n❌ Unexpected Error: {e}")
-        print("Please check your configuration and try again.")
-
+        print(f"\nUnexpected Error: {e}")
 
 if __name__ == "__main__":
     main()

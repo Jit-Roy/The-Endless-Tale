@@ -87,17 +87,3 @@ class CharacterLoader:
         """
         character_files = self.characters_dir.glob("*.json")
         return [f.stem for f in character_files]
-    
-    def character_exists(self, character_name: str) -> bool:
-        """
-        Check if a character JSON file exists.
-        
-        Args:
-            character_name: Name of the character to check
-            
-        Returns:
-            True if character file exists, False otherwise
-        """
-        filename = f"{character_name.lower()}.json"
-        filepath = self.characters_dir / filename
-        return filepath.exists()
