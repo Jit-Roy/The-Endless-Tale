@@ -3,7 +3,7 @@ Loading screen — modal dialog shown while the backend loads characters and sto
 """
 
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QProgressBar, QSizePolicy
+    QDialog, QVBoxLayout, QLabel
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
@@ -13,8 +13,6 @@ from PyQt5.QtGui import QFont
 BG       = "#0e0e0e"
 TEXT     = "#d0d0d0"
 MUTED    = "#555555"
-BAR_BG   = "#1e1e1e"
-BAR_FILL = "#888888"
 BORDER   = "#2a2a2a"
 
 
@@ -60,24 +58,6 @@ class LoadingScreen(QDialog):
         """)
         self._status.setAlignment(Qt.AlignCenter)
         layout.addWidget(self._status)
-
-        # Indeterminate progress bar
-        self._bar = QProgressBar()
-        self._bar.setRange(0, 0)   # indeterminate
-        self._bar.setTextVisible(False)
-        self._bar.setFixedHeight(3)
-        self._bar.setStyleSheet(f"""
-            QProgressBar {{
-                background-color: {BAR_BG};
-                border: none;
-                border-radius: 1px;
-            }}
-            QProgressBar::chunk {{
-                background-color: {BAR_FILL};
-                border-radius: 1px;
-            }}
-        """)
-        layout.addWidget(self._bar)
 
     # ------------------------------------------------------------------
     # Public API
