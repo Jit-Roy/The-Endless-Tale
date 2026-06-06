@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ui_main.py — PyQt5 GUI entry point for RoleRealm.
+ui_main.py — PyQt5 GUI entry point for The Endless Tale.
 
 Run this instead of main.py to launch the graphical interface:
     python ui_main.py
@@ -38,8 +38,8 @@ def main():
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
     app = QApplication(sys.argv)
-    app.setApplicationName("RoleRealm")
-    app.setOrganizationName("RoleRealm")
+    app.setApplicationName("The Endless Tale")
+    app.setOrganizationName("The Endless Tale")
 
     # ── Global font ───────────────────────────────────────────────────────
     font = QFont("Segoe UI", 11)

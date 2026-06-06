@@ -1,5 +1,5 @@
 """
-Chat display — premium widget-based message cards matching the RoleRealm reference design.
+Chat display — premium widget-based message cards.
 Each message type is rendered as its own styled QFrame card inside a QScrollArea.
 """
 
@@ -338,6 +338,8 @@ class ChatDisplay(QScrollArea):
         self._layout.setContentsMargins(12, 14, 12, 14)
         self._layout.setSpacing(6)
         self._layout.addStretch()
+        # temporary thinking widgets keyed by character name
+        self._thinking_widgets = {}
 
         self.setWidget(self._content)
 
@@ -373,8 +375,26 @@ class ChatDisplay(QScrollArea):
     # ── Private ──────────────────────────────────────────────────────────
 
     def _insert(self, widget: QWidget):
+        # Insert the widget before the stretch at the end
         self._layout.insertWidget(self._layout.count() - 1, widget)
-        QTimer.singleShot(40, self._scroll_bottom)
+        # Auto-scroll only if the user is already at (or near) the bottom.
+        sb = self.verticalScrollBar()
+        at_bottom = sb.value() >= (sb.maximum() - 80)
+        if at_bottom:
+            QTimer.singleShot(40, self._scroll_bottom)
 
     def _scroll_bottom(self):
         self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
+
+    def scroll_to_bottom(self):
+        QTimer.singleShot(40, self._scroll_bottom)
+
+    # Thinking helpers
+    def append_thinking(self, name: str, text: str):
+        # Deprecated: thinking is now displayed in ThinkingPanel.
+        # Kept for backward compatibility but does nothing.
+        return
+
+    def clear_thinking(self, name: str):
+        # Deprecated: thinking display moved to ThinkingPanel
+        return

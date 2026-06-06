@@ -40,7 +40,7 @@ class LoadingScreen(QDialog):
         layout.setSpacing(16)
 
         # Title
-        title = QLabel("RoleRealm")
+        title = QLabel("The Endless Tale")
         title.setStyleSheet(f"""
             color: {TEXT};
             font-size: 22px;

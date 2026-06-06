@@ -1,12 +1,12 @@
 """
-Right sidebar — Character cards (Present/Absent), Session Info, Save Session button.
+Right sidebar — character list only, anchored to the bottom.
 """
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-    QScrollArea, QPushButton, QSizePolicy
+    QScrollArea, QSizePolicy
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt
 
 # ── Palette ──────────────────────────────────────────────────────────────────
 DARK_BG      = "#111111"
@@ -152,40 +152,8 @@ class SectionHeader(QWidget):
         layout.addWidget(arrow)
 
 
-class InfoRow(QWidget):
-    """Session info row: label + value."""
-
-    def __init__(self, label: str, value: str = "—", parent=None):
-        super().__init__(parent)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 3, 0, 3)
-        layout.setSpacing(4)
-
-        lbl = QLabel(label)
-        lbl.setStyleSheet(f"""
-            color: {TEXT_MUTED};
-            font-size: 12px;
-            font-family: 'Segoe UI', sans-serif;
-        """)
-        layout.addWidget(lbl)
-        layout.addStretch()
-
-        self._val = QLabel(value)
-        self._val.setStyleSheet(f"""
-            color: {TEXT_SEC};
-            font-size: 12px;
-            font-family: 'Consolas', 'Segoe UI', sans-serif;
-        """)
-        layout.addWidget(self._val)
-
-    def set_value(self, value: str):
-        self._val.setText(value)
-
-
 class StatusPanel(QWidget):
     """Right sidebar panel."""
-
-    save_clicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -259,63 +227,6 @@ class StatusPanel(QWidget):
         self._cards: dict[str, CharacterCard] = {}
         self._char_body_layout = self._char_layout
 
-        # ── Session Info ─────────────────────────────────────────────────
-        outer.addWidget(_divider())
-
-        session_widget = QWidget()
-        session_widget.setStyleSheet(f"background-color: {DARK_BG};")
-        sl = QVBoxLayout(session_widget)
-        sl.setContentsMargins(14, 12, 14, 12)
-        sl.setSpacing(4)
-
-        sess_hdr = QLabel("SESSION INFO")
-        sess_hdr.setStyleSheet(f"""
-            color: {TEXT_LABEL};
-            font-size: 10px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            font-family: 'Segoe UI', sans-serif;
-            margin-bottom: 4px;
-        """)
-        sl.addWidget(sess_hdr)
-
-        self._row_time     = InfoRow("Session Time", "00:00:00")
-        self._row_msgs     = InfoRow("Messages", "0")
-        self._row_events   = InfoRow("Events", "0")
-        self._row_saved    = InfoRow("Last Saved", "—")
-
-        for row in (self._row_time, self._row_msgs, self._row_events, self._row_saved):
-            sl.addWidget(row)
-
-        # Save button
-        sl.addSpacing(8)
-        self._save_btn = QPushButton("  💾  SAVE SESSION")
-        self._save_btn.setFixedHeight(36)
-        self._save_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #1a1a1a;
-                color: {TEXT_SEC};
-                border: 1px solid {BORDER_BTN};
-                border-radius: 6px;
-                font-size: 12px;
-                font-weight: bold;
-                font-family: 'Segoe UI', sans-serif;
-                letter-spacing: 0.5px;
-            }}
-            QPushButton:hover {{
-                background-color: #222222;
-                border-color: #3a3a3a;
-                color: {TEXT_PRIMARY};
-            }}
-            QPushButton:pressed {{
-                background-color: #2a2a2a;
-            }}
-        """)
-        self._save_btn.clicked.connect(self.save_clicked)
-        sl.addWidget(self._save_btn)
-
-        outer.addWidget(session_widget)
-
     # ── Public API ───────────────────────────────────────────────────────
 
     def update_characters(self, characters: list):
@@ -366,14 +277,3 @@ class StatusPanel(QWidget):
                 layout.insertWidget(insert_pos, card)
                 self._cards[data["name"]] = card
                 insert_pos += 1
-
-    def update_session_time(self, elapsed_seconds: int):
-        h = elapsed_seconds // 3600
-        m = (elapsed_seconds % 3600) // 60
-        s = elapsed_seconds % 60
-        self._row_time.set_value(f"{h:02d}:{m:02d}:{s:02d}")
-
-    def update_session_info(self, messages: int, events: int, last_saved: str = "—"):
-        self._row_msgs.set_value(str(messages))
-        self._row_events.set_value(str(events))
-        self._row_saved.set_value(last_saved)

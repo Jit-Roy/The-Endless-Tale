@@ -1,5 +1,5 @@
 """
-Main window — premium 3-column layout with tab bar matching the RoleRealm reference design.
+Main window — premium 3-column layout with tab bar.
 Left: StoryPanel  |  Center: TabBar + ChatDisplay  |  Right: StatusPanel
 """
 
@@ -19,6 +19,7 @@ from PyQt5.QtGui import QFont
 from ui.chat_display import ChatDisplay
 from ui.story_panel import StoryPanel
 from ui.status_panel import StatusPanel
+from ui.thinking_panel import ThinkingPanel
 from ui.input_bar import InputBar
 from ui.loading_screen import LoadingScreen
 from ui.worker import RoleplayWorker
@@ -67,7 +68,6 @@ class MainWindow(QMainWindow):
         self._worker      = None
         self._thread      = None
         self._is_new      = True
-        self._elapsed_s   = 0
         self._msg_count   = 0
         self._evt_count   = 0
 
@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
     # ── Window chrome ─────────────────────────────────────────────────────
 
     def _build_window(self):
-        self.setWindowTitle("RoleRealm")
+        self.setWindowTitle("The Endless Tale")
         self.resize(1200, 760)
         self.setMinimumSize(900, 600)
         self.setStyleSheet(f"QMainWindow {{ background-color: {DARK_BG}; }}")
@@ -144,14 +144,26 @@ class MainWindow(QMainWindow):
         rl.addWidget(self._vdivider())
 
         # ── Right sidebar ─────────────────────────────────────────────────
+        right_col = QWidget()
+        right_col.setStyleSheet(f"background-color: {PANEL_BG};")
+        rc_layout = QVBoxLayout(right_col)
+        rc_layout.setContentsMargins(0, 10, 10, 10)
+        rc_layout.setSpacing(10)
+
+        # Thinking panel (ephemeral per-character thinking)
+        self._thinking_panel = ThinkingPanel()
+        rc_layout.addWidget(self._thinking_panel)
+        rc_layout.addStretch()
+
+        # Status panel (character list anchored to the bottom)
         self._status_panel = StatusPanel()
-        rl.addWidget(self._status_panel)
+        rc_layout.addWidget(self._status_panel)
+        rl.addWidget(right_col)
 
         # ── Input bar signal wiring ───────────────────────────────────────
         self._input_bar.message_submitted.connect(self._on_player_message)
         self._input_bar.listen_clicked.connect(self._on_listen)
         self._input_bar.progress_clicked.connect(self._on_progress)
-        self._status_panel.save_clicked.connect(self._on_save_session)
 
     # ── Backend / Worker ──────────────────────────────────────────────────
 
@@ -165,6 +177,7 @@ class MainWindow(QMainWindow):
 
         self._worker.load_complete.connect(self._on_load_complete)
         self._worker.event_added.connect(self._on_event_added)
+        self._worker.thinking_update.connect(self._on_thinking_update)
         self._worker.ai_thinking.connect(self._on_ai_thinking)
         self._worker.status_update.connect(self._on_status_update)
         self._worker.error_occurred.connect(self._on_error)
@@ -179,18 +192,6 @@ class MainWindow(QMainWindow):
         self._worker.initialize(self._config)
         self._worker.load_system()
 
-    # ── Session timer ─────────────────────────────────────────────────────
-
-    def _start_session_timer(self):
-        self._elapsed_s = 0
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._tick_timer)
-        self._timer.start(1000)
-
-    def _tick_timer(self):
-        self._elapsed_s += 1
-        self._status_panel.update_session_time(self._elapsed_s)
-
     # ── Worker signal slots ───────────────────────────────────────────────
 
     @pyqtSlot(bool, str)
@@ -198,7 +199,7 @@ class MainWindow(QMainWindow):
         self._loading.close()
         if not success:
             QMessageBox.critical(self, "Load Error",
-                f"Failed to load RoleRealm:\n\n{error_msg}")
+                f"Failed to load The Endless Tale:\n\n{error_msg}")
             return
 
         # Detect new vs resumed session
@@ -207,7 +208,6 @@ class MainWindow(QMainWindow):
 
         self._input_bar.set_enabled(True)
         self._on_status_update("Ready")
-        self._start_session_timer()
 
         if self._is_new:
             # Fire greeting immediately; the initial scene is already present in the backend timeline.
@@ -216,6 +216,11 @@ class MainWindow(QMainWindow):
         else:
             self._chat.append_system("Conversation resumed from previous session.")
 
+        # Force the viewport to the latest event after history restoration.
+        QTimer.singleShot(0, self._chat.scroll_to_bottom)
+        QTimer.singleShot(180, self._chat.scroll_to_bottom)
+        QTimer.singleShot(360, self._chat.scroll_to_bottom)
+
     @pyqtSlot(dict)
     def _on_event_added(self, event: dict):
         t = event.get("type", "")
@@ -223,13 +228,25 @@ class MainWindow(QMainWindow):
             self._msg_count += 1
         self._evt_count += 1
         self._chat.append_event(event)
+        # If this event is a character message/action/entry/exit, clear any
+        # temporary "thinking" indicator for that character.
+        if t in ("message", "action", "character_entry", "character_exit"):
+            char = event.get("character")
+            if char:
+                if hasattr(self, "_thinking_panel"):
+                    self._thinking_panel.clear_thinking(char)
         self._update_session_info()
+
+    @pyqtSlot(str, str)
+    def _on_thinking_update(self, name: str, text: str):
+        # Forward thinking updates to the dedicated ThinkingPanel
+        if hasattr(self, "_thinking_panel"):
+            self._thinking_panel.update_thinking(name, text)
 
     @pyqtSlot(bool)
     def _on_ai_thinking(self, thinking: bool):
         self._input_bar.set_enabled(not thinking)
         if thinking:
-            self._chat.append_system("Characters are thinking…")
             self._on_status_update("AI thinking…")
         else:
             self._on_status_update("Ready")
@@ -254,7 +271,6 @@ class MainWindow(QMainWindow):
     def _on_reset_complete(self):
         self._msg_count = 0
         self._evt_count = 0
-        self._elapsed_s = 0
         self._update_session_info()
         self._chat.append_system("Conversation reset. Starting fresh…")
 
@@ -278,26 +294,10 @@ class MainWindow(QMainWindow):
 
 
 
-    @pyqtSlot()
-    def _on_save_session(self):
-        if self._worker and self._worker.system:
-            try:
-                self._worker.system._save_conversation()
-                now = datetime.now().strftime("%H:%M:%S")
-                self._status_panel.update_session_info(
-                    self._msg_count, self._evt_count, now
-                )
-                self._on_status_update("Session saved")
-            except Exception as e:
-                self._on_error(f"Save failed: {e}")
-
     # ── Helpers ───────────────────────────────────────────────────────────
 
     def _update_session_info(self):
-        self._status_panel.update_session_info(
-            self._msg_count, self._evt_count
-        )
-        # Also update location from timeline
+        # Only update story location in the UI; session statistics are removed.
         if self._worker and self._worker.system:
             loc = self._worker.system.timeline_manager.get_current_location(
                 self._worker.system.timeline
@@ -336,6 +336,11 @@ class MainWindow(QMainWindow):
         return f
 
     def closeEvent(self, event):
+        if self._worker and self._worker.system:
+            try:
+                self._worker.system._save_conversation()
+            except Exception as e:
+                print(f"[WARNING] Failed to save on close: {e}")
         if self._thread and self._thread.isRunning():
             self._thread.quit()
             self._thread.wait(3000)

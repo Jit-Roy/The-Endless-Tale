@@ -61,6 +61,11 @@ class TurnManager:
         
         self.turn_count = 0
         self.consecutive_silence_rounds = 0
+        # Optional callbacks (set by UI worker)
+        # on_new_event(event) -> called whenever this manager adds an event to timeline
+        # on_thinking_update(name, text) -> called when a character's decision reasoning arrives
+        self.on_new_event = None
+        self.on_thinking_update = None
     
     def _status(self, text: str):
         """Emit a status message via callback if set, otherwise print."""
@@ -108,6 +113,14 @@ class TurnManager:
                 description=scene_data.get("event_description", "")
             )
             self.timeline_manager.add_event(self.timeline, scene)
+            try:
+                if self.on_new_event:
+                    self.on_new_event(scene)
+            except Exception:
+                pass
+
+            if self.save_callback:
+                self.save_callback()
 
             active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
             self.character_manager.broadcast_event_to_characters(active_characters, scene)
@@ -143,6 +156,14 @@ class TurnManager:
                 event = CharacterExit(character=character_name, description=description)
 
             self.timeline_manager.add_event(self.timeline, event)
+            try:
+                if self.on_new_event:
+                    self.on_new_event(event)
+            except Exception:
+                pass
+
+            if self.save_callback:
+                self.save_callback()
 
             active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
             self.character_manager.broadcast_event_to_characters(active_characters, event)
@@ -192,6 +213,12 @@ class TurnManager:
                         emoji = "💭" if response_type == "speak" else "👤"
                         type_label = "Speech" if response_type == "speak" else "Action"
                         self._status(f"{emoji} {character.persona.name}: Priority {priority:.2f} ({type_label}) - {reasoning}")
+                        # Notify UI about the character's thinking/reasoning text
+                        try:
+                            if self.on_thinking_update:
+                                self.on_thinking_update(character.persona.name, reasoning)
+                        except Exception:
+                            pass
                     else:
                         self._status(f"🤐 {character.persona.name}: {reasoning}")
                 except Exception as e:
@@ -262,6 +289,11 @@ class TurnManager:
                         
                         # Add scene to timeline
                         self.timeline_manager.add_event(self.timeline, scene)
+                        try:
+                            if self.on_new_event:
+                                self.on_new_event(scene)
+                        except Exception:
+                            pass
                         
                         # Broadcast scene event to currently active characters only
                         active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
@@ -310,14 +342,15 @@ class TurnManager:
                     action_description=body_language or "speaks"
                 )
                 self.timeline_manager.add_event(self.timeline, message_obj)
+                try:
+                    if self.on_new_event:
+                        self.on_new_event(message_obj)
+                except Exception:
+                    pass
                 
-                # Broadcast this TimelineEvent to currently active characters only
-                active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
-                self.character_manager.broadcast_event_to_characters(active_characters, message_obj)
-                
-                # Log the spoken message
-                self._status(f"{character.persona.name}: \"{dialogue}\"")
-                
+                if self.save_callback:
+                    self.save_callback()
+
                 responses.append((character, dialogue))
             
             elif response_type == "act":
@@ -330,14 +363,15 @@ class TurnManager:
                     description=physical_action
                 )
                 self.timeline_manager.add_event(self.timeline, action_obj)
+                try:
+                    if self.on_new_event:
+                        self.on_new_event(action_obj)
+                except Exception:
+                    pass
                 
-                # Broadcast this TimelineEvent to currently active characters only
-                active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
-                self.character_manager.broadcast_event_to_characters(active_characters, action_obj)
-                
-                self._status(f"{character.persona.name}: *{physical_action}*")
-                responses.append((character, f"[ACTION: {physical_action}]"))
-            
+                if self.save_callback:
+                    self.save_callback()
+
             last_speaker = character.persona.name
             consecutive_count += 1
             

@@ -1,5 +1,5 @@
 """
-QThread Worker for RoleRealm UI.
+QThread Worker for UI.
 Runs all blocking AI calls off the main thread, emitting signals to update the UI.
 """
 
@@ -23,6 +23,8 @@ class RoleplayWorker(QObject):
     event_added = pyqtSignal(dict)            # event_data dict
     # Fired when AI starts/stops thinking
     ai_thinking = pyqtSignal(bool)
+    # Fired when a character's thinking/reasoning text is available
+    thinking_update = pyqtSignal(str, str)  # name, text
     # Status bar / debug text
     status_update = pyqtSignal(str)
     # Fired when an error occurs
@@ -97,6 +99,10 @@ class RoleplayWorker(QObject):
 
             # Patch turn_manager to use our status callback instead of print
             self.system.turn_manager.on_status = self._on_backend_status
+            # Stream new events immediately to the UI
+            self.system.turn_manager.on_new_event = lambda ev: self.event_added.emit(self._serialize_event(ev))
+            # Stream per-character thinking text
+            self.system.turn_manager.on_thinking_update = lambda name, text: self.thinking_update.emit(name, text)
 
             # Emit existing events (from loaded conversation)
             from data_models import Message, Scene, Action, CharacterEntry, CharacterExit
@@ -249,17 +255,12 @@ class RoleplayWorker(QObject):
         if max_turns is None:
             max_turns = turn_manager.max_consecutive_ai_turns
 
-        # Snapshot current event count
-        prev_count = len(self.system.timeline.events)
-
-        # Run the full AI response cycle
+        # Run the full AI response cycle. TurnManager will call our
+        # on_new_event callback for each event as it's created, so we
+        # don't need to batch-emit here.
         responses = turn_manager.process_ai_responses(max_turns=max_turns)
 
-        # Emit all newly added events
-        current_events = self.system.timeline.events
-        for event in current_events[prev_count:]:
-            self.event_added.emit(self._serialize_event(event))
-
+        # After the AI turn sequence completes, refresh character/story views
         self._emit_characters_updated()
         self._emit_story_updated()
 

@@ -119,7 +119,7 @@ class StoryPanel(QWidget):
         shield.setStyleSheet("color: #666666; font-size: 16px;")
         ll.addWidget(shield)
 
-        brand = QLabel("RoleRealm")
+        brand = QLabel("The Endless Tale")
         brand.setStyleSheet(f"""
             color: {TEXT_PRIMARY};
             font-size: 17px;
