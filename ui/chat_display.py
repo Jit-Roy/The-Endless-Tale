@@ -301,6 +301,112 @@ class SystemMsg(QWidget):
         layout.addWidget(lbl)
 
 
+class ObjectiveCard(QFrame):
+    def __init__(self, character_name: str, objective: str, parent=None):
+        super().__init__(parent)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {CARD_BG};
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+            }}
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(4)
+
+        name_lbl = QLabel(character_name)
+        name_lbl.setStyleSheet(
+            "color: #e8e8e8; font-size: 12px; font-weight: bold; font-family: 'Segoe UI', sans-serif;"
+        )
+        layout.addWidget(name_lbl)
+
+        objective_lbl = QLabel(objective)
+        objective_lbl.setWordWrap(True)
+        objective_lbl.setStyleSheet(
+            "color: #bfc0c2; font-size: 13px; font-family: 'Segoe UI', sans-serif; line-height: 1.4;"
+        )
+        layout.addWidget(objective_lbl)
+
+
+class ObjectiveView(QScrollArea):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setStyleSheet(f"""
+            QScrollArea {{
+                background-color: {MAIN_BG};
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background: #141414;
+                width: 4px;
+                border: none;
+            }}
+            QScrollBar::handle:vertical {{
+                background: #2e2e2e;
+                border-radius: 2px;
+                min-height: 30px;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0;
+            }}
+        """)
+
+        self._content = QWidget()
+        self._content.setStyleSheet(f"background-color: {MAIN_BG};")
+        self._layout = QVBoxLayout(self._content)
+        self._layout.setContentsMargins(14, 14, 14, 14)
+        self._layout.setSpacing(12)
+
+        self._title = QLabel("Current Objectives")
+        self._title.setStyleSheet(
+            "color: #e8e8e8; font-size: 17px; font-weight: bold; font-family: 'Segoe UI', sans-serif;"
+        )
+        self._layout.addWidget(self._title)
+
+        self._story_objective = QLabel("No story objective available.")
+        self._story_objective.setWordWrap(True)
+        self._story_objective.setStyleSheet(
+            "color: #b0b0b0; font-size: 13px; font-family: 'Segoe UI', sans-serif;"
+        )
+        self._layout.addWidget(self._story_objective)
+
+        # Removed extra divider to avoid visual clutter in ObjectiveView
+
+        self._objectives_list = QWidget()
+        self._list_layout = QVBoxLayout(self._objectives_list)
+        self._list_layout.setContentsMargins(0, 0, 0, 0)
+        self._list_layout.setSpacing(10)
+        self._layout.addWidget(self._objectives_list)
+        self._layout.addStretch()
+
+        self.setWidget(self._content)
+
+    def update_story(self, data: dict):
+        story_text = data.get("current_objective", "No current story objective.")
+        self._story_objective.setText(f"Story objective: {story_text}")
+
+    def update_objectives(self, characters: list):
+        while self._list_layout.count():
+            item = self._list_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        if not characters:
+            self._list_layout.addWidget(_text("No character objectives available yet.", TEXT_MUTED, 12))
+            return
+
+        for char in characters:
+            name = char.get("name", "Unknown")
+            objective = char.get("objective", "—")
+            self._list_layout.addWidget(ObjectiveCard(name, objective))
+
+
 # ── Main scroll container ─────────────────────────────────────────────────────
 
 class ChatDisplay(QScrollArea):

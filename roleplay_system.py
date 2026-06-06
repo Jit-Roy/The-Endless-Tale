@@ -6,7 +6,6 @@ from typing import List, Optional
 from pathlib import Path
 from datetime import datetime
 import json
-
 from data_models import CharacterPersona, Character, TimelineHistory
 from managers.turn_manager import TurnManager
 from managers.timelineManager import TimelineManager
@@ -75,9 +74,11 @@ class RoleplaySystem:
         temp_timeline_manager.add_event(timeline, initial_scene)
         
         # Create turn manager with pre-built timeline
+        self.story_manager = story_manager if story_manager is not None else None
         self.turn_manager = TurnManager(
             characters=self.ai_characters,
             timeline=timeline,
+            story_manager=self.story_manager,
             save_callback=lambda: self._save_conversation()
         )
         
@@ -126,6 +127,49 @@ class RoleplaySystem:
                 self.timeline.timeline_summary = data['timeline_summary']
             if 'visible_to_user' in data:
                 self.timeline.visible_to_user = data['visible_to_user']
+
+            # Restore story progress if available
+            if 'story' in data:
+                try:
+                    sdata = data['story']
+                    from data_models import Story
+                    from managers.storyManager import StoryManager
+
+                    if not self.story_manager:
+                        self.story_manager = StoryManager(Story(**sdata))
+                        self.turn_manager.story_manager = self.story_manager
+                    elif not self.story_manager.story:
+                        self.story_manager.story = Story(**sdata)
+                    else:
+                        # Preserve the loaded story structure, but restore saved progress
+                        if 'title' in sdata:
+                            self.story_manager.story.title = sdata['title']
+                        if 'description' in sdata:
+                            self.story_manager.story.description = sdata['description']
+                        if isinstance(sdata.get('objectives'), list):
+                            self.story_manager.story.objectives = sdata['objectives']
+
+                        idx = sdata.get('current_objective_index', self.story_manager.story.current_objective_index)
+                        if isinstance(idx, str) and idx.isdigit():
+                            idx = int(idx)
+                        if isinstance(idx, int):
+                            idx = max(0, min(idx, len(self.story_manager.story.objectives)))
+                            self.story_manager.story.current_objective_index = idx
+                except Exception:
+                    pass
+
+            # Restore per-character objectives if available
+            saved_char_states = data.get('character_states', {}) or {}
+            if saved_char_states:
+                for c in self.ai_characters:
+                    try:
+                        if c.persona.name in saved_char_states:
+                            if not c.state:
+                                from data_models import CharacterState
+                                c.state = CharacterState(name=c.persona.name)
+                            c.state.current_objective = saved_char_states[c.persona.name]
+                    except Exception:
+                        pass
             
             # Restore events (messages, scenes, and actions)
             for event_data in data.get('events', []):
@@ -284,6 +328,23 @@ class RoleplaySystem:
                 timeline_data["events"].append(event_data)
             
             with open(filepath, 'w', encoding='utf-8') as f:
+                # Include story progress and character objectives for persistence
+                if self.story_manager and self.story_manager.story:
+                    story = self.story_manager.story
+                    timeline_data["story"] = {
+                        "id": story.id,
+                        "title": story.title,
+                        "description": getattr(story, "description", ""),
+                        "objectives": story.objectives,
+                        "current_objective_index": story.current_objective_index,
+                    }
+                # Save current per-character objectives
+                char_states = {}
+                for c in self.ai_characters:
+                    if c.state and c.state.current_objective:
+                        char_states[c.persona.name] = c.state.current_objective
+                timeline_data["character_states"] = char_states
+
                 json.dump(timeline_data, f, indent=2, ensure_ascii=False)
                 
         except Exception as e:

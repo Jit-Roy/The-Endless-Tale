@@ -11,12 +11,12 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QLabel, QStatusBar, QMessageBox, QFrame,
     QSizePolicy, QDialog, QDialogButtonBox, QTextEdit,
-    QPushButton
+    QPushButton, QStackedWidget
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSlot, QMetaObject, Q_ARG, QTimer
 from PyQt5.QtGui import QFont
 
-from ui.chat_display import ChatDisplay
+from ui.chat_display import ChatDisplay, ObjectiveView
 from ui.story_panel import StoryPanel
 from ui.status_panel import StatusPanel
 from ui.thinking_panel import ThinkingPanel
@@ -126,9 +126,52 @@ class MainWindow(QMainWindow):
 
         # (Tabs removed) — main canvas will be shown directly
 
-        # Chat display
+        # View selector (Chat / Objectives)
+        self._view_bar = QWidget()
+        self._view_bar.setStyleSheet(f"background-color: {MAIN_BG};")
+        vb = QHBoxLayout(self._view_bar)
+        vb.setContentsMargins(14, 12, 14, 12)
+        vb.setSpacing(8)
+
+        self._chat_button = QPushButton("Chat")
+        self._chat_button.setCheckable(True)
+        self._chat_button.clicked.connect(lambda: self._set_view_index(0))
+        self._obj_button = QPushButton("Objectives")
+        self._obj_button.setCheckable(True)
+        self._obj_button.clicked.connect(lambda: self._set_view_index(1))
+
+        button_style = f"""
+            QPushButton {{
+                color: {TEXT_PRIMARY};
+                background-color: {PANEL_BG};
+                border: 1px solid {BORDER};
+                border-radius: 6px;
+                padding: 8px 14px;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 12px;
+            }}
+            QPushButton:checked {{
+                background-color: {MAIN_BG};
+                border-color: {TEXT_PRIMARY};
+            }}
+        """
+        self._chat_button.setStyleSheet(button_style)
+        self._obj_button.setStyleSheet(button_style)
+
+        vb.addWidget(self._chat_button)
+        vb.addWidget(self._obj_button)
+        vb.addStretch()
+        cl.addWidget(self._view_bar)
+
+        # Main center views
         self._chat = ChatDisplay(player_name=player)
-        cl.addWidget(self._chat, stretch=1)
+        self._objective_view = ObjectiveView()
+        self._view_stack = QStackedWidget()
+        self._view_stack.addWidget(self._chat)
+        self._view_stack.addWidget(self._objective_view)
+        cl.addWidget(self._view_stack, stretch=1)
+
+        self._set_view_index(0)
 
         # Divider above input
         cl.addWidget(self._hdivider())
@@ -182,7 +225,9 @@ class MainWindow(QMainWindow):
         self._worker.status_update.connect(self._on_status_update)
         self._worker.error_occurred.connect(self._on_error)
         self._worker.characters_updated.connect(self._status_panel.update_characters)
+        self._worker.characters_updated.connect(self._on_characters_updated)
         self._worker.story_updated.connect(self._on_story_updated)
+        self._worker.story_updated.connect(self._on_objective_view_story_updated)
         self._worker.reset_complete.connect(self._on_reset_complete)
 
         self._thread.started.connect(self._run_load)
@@ -266,6 +311,23 @@ class MainWindow(QMainWindow):
     @pyqtSlot(dict)
     def _on_story_updated(self, data: dict):
         self._story_panel.update_story(data)
+
+    @pyqtSlot(list)
+    def _on_characters_updated(self, characters: list):
+        if hasattr(self, '_objective_view'):
+            self._objective_view.update_objectives(characters)
+
+    @pyqtSlot(dict)
+    def _on_objective_view_story_updated(self, data: dict):
+        if hasattr(self, '_objective_view'):
+            self._objective_view.update_story(data)
+
+    def _set_view_index(self, index: int):
+        if hasattr(self, '_view_stack'):
+            self._view_stack.setCurrentIndex(index)
+        if hasattr(self, '_chat_button') and hasattr(self, '_obj_button'):
+            self._chat_button.setChecked(index == 0)
+            self._obj_button.setChecked(index == 1)
 
     @pyqtSlot()
     def _on_reset_complete(self):
