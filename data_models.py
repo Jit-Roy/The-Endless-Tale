@@ -114,14 +114,6 @@ class CharacterPersona(BaseModel):
         default=None,
         description="Information, secrets, or world knowledge specific to this character"
     )
-    temperature: Optional[float] = Field(
-        default=0.75,
-        description="Model temperature for this character (affects response variability)"
-    )
-    top_p: Optional[float] = Field(
-        default=0.9,
-        description="Top-p sampling for this character"
-    )
 
 
 class CharacterMemory(BaseModel):

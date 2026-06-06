@@ -38,12 +38,6 @@ class StoryManager:
             return True
         return self.story.current_objective_index >= len(self.story.objectives)
     
-    def get_progress_percentage(self) -> float:
-        """Get the percentage of story completion."""
-        if not self.story or len(self.story.objectives) == 0:
-            return 100.0
-        return (self.story.current_objective_index / len(self.story.objectives)) * 100
-    
     def get_story_context(self) -> str:
         """Get the current story context for AI characters."""
         if not self.story:
@@ -52,12 +46,10 @@ class StoryManager:
         current_objective = self.get_current_objective()
         if not current_objective:
             return "Story completed! All objectives achieved."
-        
-        progress = self.get_progress_percentage()
+    
         
         context = f"""
         STORY: {self.story.title}
-        Progress: {progress:.0f}% ({self.story.current_objective_index + 1} of {len(self.story.objectives)} objectives)
 
         CURRENT STORY OBJECTIVE:
         {current_objective}
@@ -68,7 +60,6 @@ class StoryManager:
         Remember: Work naturally toward accomplishing the current objective through your character's unique perspective and abilities.
         """
         return context
-    
     
     def evaluate_and_assign_objectives(
         self,
@@ -169,16 +160,12 @@ class StoryManager:
         else:
             # Ongoing: Evaluate and reassign
             prompt = f"""You are evaluating story progression in an interactive roleplay.
-
             CURRENT STORY OBJECTIVE (Overall goal):
             {current_story_objective}
-
             ACTIVE CHARACTERS AND CURRENT OBJECTIVES:
             {char_info_text}
-
             RECENT CONVERSATION (Last 15 events):
             {timeline_text}
-
             EVALUATE AND UPDATE:
 
             1. For EACH character:
@@ -226,24 +213,3 @@ class StoryManager:
             # Story complete
             self.story.current_objective_index = len(self.story.objectives)
             return False
-    
-    def get_progress_summary(self) -> str:
-        """Get a summary of story progress."""
-        if not self.story:
-            return "No story active."
-        
-        if self.is_story_complete():
-            return f"""
-            📖 Story Complete: {self.story.title}
-            ✅ All {len(self.story.objectives)} objectives achieved!
-            """
-        
-        current_objective = self.get_current_objective()
-        progress = self.get_progress_percentage()
-        
-        return f"""
-        📖 Story: {self.story.title}
-        📊 Progress: {progress:.0f}% 
-        🎯 Objective {self.story.current_objective_index + 1} of {len(self.story.objectives)}
-        "{current_objective}"
-        """

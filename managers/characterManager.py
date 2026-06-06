@@ -28,7 +28,6 @@ class CharacterManager:
 
         Creates it on first call with:
         - system_instruction = full persona (traits, background, relationships, goals)
-        - temperature / top_p   = character-specific values
 
         Each call to generate_content() on this model is stateless — no history
         is accumulated between turns. Context is passed explicitly via memory_context.
@@ -36,9 +35,7 @@ class CharacterManager:
         name = character.persona.name
         if name not in self._character_models:
             self._character_models[name] = GenerativeModel(
-                system_instruction=self.build_persona_context(character),
-                temperature=character.persona.temperature,
-                top_p=character.persona.top_p,
+                system_instruction=self.build_persona_context(character)
             )
         return self._character_models[name]
     
@@ -198,6 +195,9 @@ class CharacterManager:
         """ 
 
         # Persona is already in the model's system_instruction — don't repeat it here.
+        # self._gen_config = types.GenerateContentConfig(
+        #     system_instruction=system_instruction,
+        # )
         state_context = self.build_state_context(character) or " None"
         memory_context = self.build_memory_context(character, last_n_messages=10)
 
@@ -325,13 +325,8 @@ class CharacterManager:
         """
         
         try:
-            # Build prompt from THIS character's perspective
             prompt = self.build_decision_prompt(character)
-            
-            # Use this character's dedicated session (temperature/top_p already set at creation)
             response = self._get_or_create_model(character).generate_content(prompt)
-            
-            # Parse JSON response
             decision_data = parse_json_response(response.text)
             
             response_type = decision_data.get("type", "silent").lower()

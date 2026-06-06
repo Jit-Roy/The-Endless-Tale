@@ -602,64 +602,60 @@ class TimelineManager:
         absent_characters = [c for c in all_characters if c not in current_participants]
 
         prompt = f"""You are the meta-narrator for a roleplay story. Analyse the recent timeline and make ALL of the following decisions in ONE response:
+        === STORY STATE ===
+        Current Location: {current_location}
+        Currently Present: {', '.join(current_participants) if current_participants else 'None'}
+        Absent Characters: {', '.join(absent_characters) if absent_characters else 'None'}
+        RECENT TIMELINE (chronological): {timeline_str}
+        === DECISION 1 — SCENE EVENT ===
+        Decide whether a scene event should occur RIGHT NOW.
 
-=== STORY STATE ===
-Current Location: {current_location}
-Currently Present: {', '.join(current_participants) if current_participants else 'None'}
-Absent Characters: {', '.join(absent_characters) if absent_characters else 'None'}
+        GENERATE A SCENE IF:
+        - Characters expressed intent to move to a new location (→ use "transition")
+        - Conversation has naturally stalled or a topic has concluded (→ use "environmental")
+        - An environmental interruption would meaningfully advance the story
 
-RECENT TIMELINE (chronological):
-{timeline_str}
+        DO NOT GENERATE A SCENE IF:
+        - Characters are engaged in active, flowing dialogue
+        - A scene event already appears in the recent timeline above
+        - The story is mid-emotional or mid-revelation
 
-=== DECISION 1 — SCENE EVENT ===
-Decide whether a scene event should occur RIGHT NOW.
+        For TRANSITION scenes: describe the journey and vivid arrival at the NEW location.
+        For ENVIRONMENTAL scenes: describe a physical/mysterious event in the CURRENT location.
 
-GENERATE A SCENE IF:
-- Characters expressed intent to move to a new location (→ use "transition")
-- Conversation has naturally stalled or a topic has concluded (→ use "environmental")
-- An environmental interruption would meaningfully advance the story
+        === DECISION 2 — CHARACTER MOVEMENTS ===
+        Decide which characters (if any) should enter or exit the scene RIGHT NOW based on narrative logic and character motivations.
 
-DO NOT GENERATE A SCENE IF:
-- Characters are engaged in active, flowing dialogue
-- A scene event already appears in the recent timeline above
-- The story is mid-emotional or mid-revelation
+        For ENTRY descriptions, include what the entering character physically observes:
+        - The environment/location they walk into
+        - Who is visibly present
+        - Observable body language or tension (NOT what was said before they arrived)
 
-For TRANSITION scenes: describe the journey and vivid arrival at the NEW location.
-For ENVIRONMENTAL scenes: describe a physical/mysterious event in the CURRENT location.
+        For EXIT descriptions: 1-2 sentences describing how they leave.
 
-=== DECISION 2 — CHARACTER MOVEMENTS ===
-Decide which characters (if any) should enter or exit the scene RIGHT NOW based on narrative logic and character motivations.
+        === OUTPUT FORMAT (strict JSON) ===
+        {{
+            "scene": null,
+            "entries": [],
+            "exits": []
+        }}
 
-For ENTRY descriptions, include what the entering character physically observes:
-- The environment/location they walk into
-- Who is visibly present
-- Observable body language or tension (NOT what was said before they arrived)
+        OR if a scene and/or movements should happen:
+        {{
+            "scene": {{
+                "scene_type": "transition" | "environmental",
+                "location": "location name",
+                "event_description": "2-3 vivid sentences"
+            }},
+            "entries": [
+                {{"character": "name", "description": "entry description"}}
+            ],
+            "exits": [
+                {{"character": "name", "description": "exit description"}}
+            ]
+        }}
 
-For EXIT descriptions: 1-2 sentences describing how they leave.
-
-=== OUTPUT FORMAT (strict JSON) ===
-{{
-    "scene": null,
-    "entries": [],
-    "exits": []
-}}
-
-OR if a scene and/or movements should happen:
-{{
-    "scene": {{
-        "scene_type": "transition" | "environmental",
-        "location": "location name",
-        "event_description": "2-3 vivid sentences"
-    }},
-    "entries": [
-        {{"character": "name", "description": "entry description"}}
-    ],
-    "exits": [
-        {{"character": "name", "description": "exit description"}}
-    ]
-}}
-
-Only include movements and scenes that make narrative sense RIGHT NOW. If nothing should happen, return null for scene and empty lists."""
+        Only include movements and scenes that make narrative sense RIGHT NOW. If nothing should happen, return null for scene and empty lists."""
 
         try:
             response = self.model.generate_content(prompt)
