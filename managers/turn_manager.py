@@ -8,8 +8,6 @@ from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 import random
 import time
 from typing import List, Optional, Tuple
-from colorama import Fore, Style
-
 from data_models import Message, TimelineHistory, Character, Scene, CharacterEntry, CharacterExit
 from managers.timelineManager import TimelineManager
 from managers.characterManager import CharacterManager
@@ -42,8 +40,8 @@ class TurnManager:
         Args:
             characters: List of AI characters in the conversation
             timeline: TimelineHistory instance containing all events and participants
-            max_consecutive_ai_turns: Maximum number of consecutive AI turns (defaults to Config.MAX_CONSECUTIVE_AI_TURNS)
-            priority_randomness: Random factor to add to priority for naturalness (defaults to Config.PRIORITY_RANDOMNESS)
+            max_consecutive_ai_turns: Maximum number of consecutive AI turns 
+            priority_randomness: Random factor to add to priority for naturalness 
             save_callback: Optional callback function to save conversation after AI responses
             on_status: Optional callback(str) called instead of print() for status messages.
                        When set, time.sleep() calls are also skipped (GUI mode).
@@ -80,84 +78,6 @@ class TurnManager:
         if not self.on_status:
             time.sleep(seconds)
 
-    def _collect_speaking_decisions(self) -> List[Tuple[Character, Tuple[str, float, str, Optional[str], Optional[str]]]]:
-        """
-        Collect response decisions from all AI characters using parallel execution.
-        
-        Returns:
-            List of tuples containing (character, decision_tuple) for characters that want to respond (speak or act)
-        """
-        decisions = []
-        quota_exceeded = False
-        
-        # Define worker function for parallel execution
-        def get_character_decision(character):
-            return character, self.character_manager.decide_turn_response(
-                character
-            )
-        
-        # Execute all character decisions in parallel
-        with ThreadPoolExecutor(max_workers=len(self.characters)) as executor:
-            futures = {executor.submit(get_character_decision, char): char for char in self.characters}
-            
-            # Process results as they complete
-            for future in as_completed(futures):
-                try:
-                    character, (response_type, priority, reasoning, dialogue, action) = future.result()
-                    
-                    # Check for quota exceeded error
-                    if reasoning == "API_QUOTA_EXCEEDED":
-                        quota_exceeded = True
-                        continue
-                    
-                    if response_type in ["speak", "act"]:
-                        decisions.append((character, (response_type, priority, reasoning, dialogue, action)))
-                        emoji = "💭" if response_type == "speak" else "👤"
-                        type_label = "Speech" if response_type == "speak" else "Action"
-                        self._status(f"{emoji} {character.persona.name}: Priority {priority:.2f} ({type_label}) - {reasoning}")
-                    else:
-                        self._status(f"🤐 {character.persona.name}: {reasoning}")
-                        
-                except Exception as e:
-                    character = futures[future]
-                    self._status(f"⚠️ Error getting decision from {character.persona.name}: {e}")
-        
-        if quota_exceeded:
-            self._status("⚠️ API QUOTA EXCEEDED")
-        
-        return decisions
-    
-    def _select_speaker_from_decisions(
-        self, 
-        decisions: List[Tuple[Character, Tuple[str, float, str, Optional[str], Optional[str]]]]
-    ) -> Optional[Tuple[Character, str, Optional[str], Optional[str]]]:
-        """
-        Select which character should respond (speak or act) based on priorities.
-        
-        Args:
-            decisions: List of (character, decision_tuple) tuples
-            
-        Returns:
-            Tuple of (character, response_type, dialogue, action) for the selected character, or None
-            - For "speak": dialogue=spoken words, action=body language
-            - For "act": dialogue=None, action=physical action
-        """
-        if not decisions:
-            return None
-        
-        # Sort by priority with small random factor for naturalness
-        decisions_with_adjusted_priority = [
-            (char, decision_tuple, decision_tuple[1] + random.uniform(-self.priority_randomness, self.priority_randomness))
-            for char, decision_tuple in decisions
-        ]
-        
-        decisions_with_adjusted_priority.sort(key=lambda x: x[2], reverse=True)
-        selected_character, decision_tuple, _ = decisions_with_adjusted_priority[0]
-        response_type = decision_tuple[0]
-        dialogue = decision_tuple[3]  
-        action = decision_tuple[4]
-        return (selected_character, response_type, dialogue, action)
-    
     def _process_meta_narrative_decisions(self) -> None:
         """
         Process meta-narrative decisions in a SINGLE unified API call.
@@ -229,7 +149,7 @@ class TurnManager:
 
             self._status(f"   {description}")
             self._sleep(1)
-    
+
     def select_next_speaker(self) -> Optional[Tuple[Character, str, Optional[str], Optional[str]]]:
         """
         Select which AI character should respond next (speak or act).
@@ -248,21 +168,54 @@ class TurnManager:
         
         # Collect decisions from all currently active characters
         active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
+        if not active_characters:
+            self._status("No one wants to speak right now.")
+            return None
         
-        # Temporarily update self.characters for _collect_speaking_decisions
-        original_characters = self.characters
-        self.characters = active_characters
-        decisions = self._collect_speaking_decisions()
-        self.characters = original_characters
+        def get_character_decision(character: Character):
+            return character, self.character_manager.decide_turn_response(character)
+        
+        decisions = []
+        quota_exceeded = False
+        with ThreadPoolExecutor(max_workers=len(active_characters)) as executor:
+            futures = {executor.submit(get_character_decision, char): char for char in active_characters}
+            for future in as_completed(futures):
+                try:
+                    character, (response_type, priority, reasoning, dialogue, action) = future.result()
+                    
+                    if reasoning == "API_QUOTA_EXCEEDED":
+                        quota_exceeded = True
+                        continue
+                    
+                    if response_type in ["speak", "act"]:
+                        decisions.append((character, (response_type, priority, reasoning, dialogue, action)))
+                        emoji = "💭" if response_type == "speak" else "👤"
+                        type_label = "Speech" if response_type == "speak" else "Action"
+                        self._status(f"{emoji} {character.persona.name}: Priority {priority:.2f} ({type_label}) - {reasoning}")
+                    else:
+                        self._status(f"🤐 {character.persona.name}: {reasoning}")
+                except Exception as e:
+                    character = futures[future]
+                    self._status(f"⚠️ Error getting decision from {character.persona.name}: {e}")
+        
+        if quota_exceeded:
+            self._status("⚠️ API QUOTA EXCEEDED")
         
         if not decisions:
             self._status("No one wants to speak right now.")
             return None
         
-        # Select the speaker
-        result = self._select_speaker_from_decisions(decisions)
-        
-        return result
+        # Sort by priority with small random factor for naturalness
+        decisions_with_adjusted_priority = [
+            (char, decision_tuple, decision_tuple[1] + random.uniform(-self.priority_randomness, self.priority_randomness))
+            for char, decision_tuple in decisions
+        ]
+        decisions_with_adjusted_priority.sort(key=lambda x: x[2], reverse=True)
+        selected_character, decision_tuple, _ = decisions_with_adjusted_priority[0]
+        response_type = decision_tuple[0]
+        dialogue = decision_tuple[3]
+        action = decision_tuple[4]
+        return (selected_character, response_type, dialogue, action)
     
     def process_ai_responses(self, max_turns: Optional[int] = None) -> List[Tuple[Character, str]]:
         """Process AI responses ONE AT A TIME until no one wants to speak or max turns reached.
@@ -289,7 +242,6 @@ class TurnManager:
         
         while consecutive_count < max_turns:
             # Ask ONE character at a time (sequentially, not in parallel)
-            # Note: select_next_speaker() prints its own "thinking" and "no one speaks" messages
             result = self.select_next_speaker()
             
             if result is None:
