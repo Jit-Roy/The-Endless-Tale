@@ -62,7 +62,6 @@ class TurnManager:
         self.story_manager = story_manager if story_manager is not None else StoryManager()
         
         self.turn_count = 0
-        self.consecutive_silence_rounds = 0
         # Optional callbacks (set by UI worker)
         # on_new_event(event) -> called whenever this manager adds an event to timeline
         # on_thinking_update(name, text) -> called when a character's decision reasoning arrives
@@ -256,6 +255,7 @@ class TurnManager:
             
         Returns:
             List of (character, message) tuples for AI turns that want to speak """
+        
         if max_turns is None:
             max_turns = self.max_consecutive_ai_turns
         
@@ -274,48 +274,38 @@ class TurnManager:
             result = self.select_next_speaker()
             
             if result is None:
-                # No one wants to speak - increment silence counter
-                self.consecutive_silence_rounds += 1
-                self._status(f"Silence round {self.consecutive_silence_rounds}/2")
-                
-                # Generate scene event when conversation stalls
-                if self.consecutive_silence_rounds >= 2:
+                # No one wants to speak - generate a scene event immediately
+                self._status("Silence detected, generating scene event...")
+                try:
+                    scene = self.timeline_manager.generate_scene_event(
+                        scene_type="environmental",
+                        timeline=self.timeline,
+                        recent_event_count=15
+                    )
+                    
+                    self._status(scene.description)
+                    
+                    # Add scene to timeline
+                    self.timeline_manager.add_event(self.timeline, scene)
                     try:
-                        scene = self.timeline_manager.generate_scene_event(
-                            scene_type="environmental",
-                            timeline=self.timeline,
-                            recent_event_count=15
-                        )
-                        
-                        self._status(scene.description)
-                        
-                        # Add scene to timeline
-                        self.timeline_manager.add_event(self.timeline, scene)
-                        try:
-                            if self.on_new_event:
-                                self.on_new_event(scene)
-                        except Exception:
-                            pass
-                        
-                        # Broadcast scene event to currently active characters only
-                        active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
-                        self.character_manager.broadcast_event_to_characters(active_characters, scene)
-                        
-                        # Save conversation after scene event if callback is provided
-                        if self.save_callback:
-                            self.save_callback()
-                        
-                        self._sleep(2)
-                        
-                    except Exception as e:
-                        self._status(f"Error generating scene event: {e}")
-                    # Reset silence counter after scene event
-                    self.consecutive_silence_rounds = 0
-                
+                        if self.on_new_event:
+                            self.on_new_event(scene)
+                    except Exception:
+                        pass
+                    
+                    # Broadcast scene event to currently active characters only
+                    active_characters = [c for c in self.characters if c.persona.name in self.timeline.current_participants]
+                    self.character_manager.broadcast_event_to_characters(active_characters, scene)
+                    
+                    # Save conversation after scene event if callback is provided
+                    if self.save_callback:
+                        self.save_callback()
+                    
+                    self._sleep(2)
+                    
+                except Exception as e:
+                    self._status(f"Error generating scene event: {e}")
                 break
-            
-            # Reset silence counter when someone responds
-            self.consecutive_silence_rounds = 0
             
             character, response_type, dialogue, action = result
             

@@ -276,41 +276,43 @@ class TimelineManager:
                 {timeline_str}
 
                 SITUATION:
-                Generate a dramatic environmental event that interrupts the current moment.
+                Generate a dramatic environmental event that interrupts the current moment and forces the characters to react or make a decision.
 
                 YOUR TASK:
                 Create an event that happens in the CURRENT location that:
                 1. **Interrupts the moment** - Something happens in the environment
                 2. **Demands attention** - Characters MUST notice and can react
-                3. **Pushes story forward** - Creates tension, reveals something, or advances plot
-                4. **Is different** from previous scene events above
+                3. **Pushes story forward** - Creates tension, reveals a complication, or introduces a stake
+                4. **Creates a decision point** - The event should require characters to choose, investigate, respond, or adapt
+                5. **Is different** from previous scene events above
 
-                EVENT TYPES (choose dynamically):
-                - **Physical**: Wind blows, object falls, door slams, temperature changes
-                - **Discovery**: Hidden object revealed, clue appears, item falls open
-                - **Mysterious**: Strange sound, shadow moves, unusual occurrence
-                - **Danger**: Warning sign, threat appears, alarm triggers
-                - **Character-related**: Someone notices something, messenger arrives (NOT character entry)
+                STORY-DRIVEN EVENT TYPES (choose dynamically):
+                - **Immediate threat**: A rival ship appears, a fire breaks out, a dangerous creature approaches
+                - **Complication**: A hidden object is found, a map goes wrong, a key item is missing
+                - **Mysterious clue**: The compass spins, a strange signal arrives, a door opens by itself
+                - **Character consequence**: Someone returns injured or silent, a secret is exposed, a tense argument erupts
+                - **Forced choice**: The characters must decide how to act now, not later
 
                 CRITICAL RULES:
                 - Event happens in CURRENT location: {current_location or 'Unknown'}
                 - Do NOT change location
                 - Make it SPECIFIC and VIVID (not generic)
                 - Include sensory details (what they see/hear/feel)
-                - Must be something characters can react to
+                - Must create a story problem or dramatic question
+                - Should feel like an event the player must engage with, not mere atmosphere
                 - Vary event type - don't repeat patterns from timeline
                 - Match the tone and setting of the world established in the timeline
 
                 OUTPUT FORMAT (strict JSON):
                 {{
                 "location": "{current_location or 'Unknown'}",
-                "event_description": "2-3 sentence vivid description of what happens"
+                "event_description": "2-3 sentence vivid description of what happens and why it matters"
                 }}
 
                 EXAMPLE:
                 {{
                 "location": "The Library",
-                "event_description": "A sudden gust of ice-cold wind tears through the library, extinguishing half the lights. Pages flutter wildly as a single ancient tome slides off a high shelf and crashes open on the table between them—landing on a page marked with a glowing symbol."
+                "event_description": "A sudden gust of ice-cold wind tears through the library, extinguishing half the lights. Pages flutter wildly as a single ancient tome slides off a high shelf and crashes open on the table between them—landing on a page marked with a glowing symbol that demands investigation."
                 }}"""
             
             response = self.model.generate_content(prompt)

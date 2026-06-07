@@ -152,7 +152,7 @@ class RoleplayWorker(QObject):
         try:
             self.ai_thinking.emit(True)
             self.status_update.emit("Listening quietly…")
-            self._run_ai_responses(max_turns=5)
+            self._run_ai_responses(max_turns=3)
         except Exception as e:
             self.error_occurred.emit(str(e))
         finally:
@@ -166,7 +166,7 @@ class RoleplayWorker(QObject):
         try:
             self.ai_thinking.emit(True)
             self.status_update.emit("Skipping turn…")
-            self._run_ai_responses(max_turns=5)
+            self._run_ai_responses(max_turns=3)
         except Exception as e:
             self.error_occurred.emit(str(e))
         finally:
