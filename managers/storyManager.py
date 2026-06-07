@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from data_models import Story, Character, TimelineHistory
-from gemini_client import GenerativeModel
+from gemini_client import GenerativeModel, Config
 from helpers.response_parser import parse_json_response
 from managers.timelineManager import TimelineManager
 
@@ -25,6 +25,7 @@ class StoryManager:
         """
         self.story = story
         self.model = GenerativeModel()
+        self.background_model = GenerativeModel(api_key=Config.BACKGROUND_GOOGLE_API_KEY)
     
     def get_current_objective(self) -> Optional[str]:
         """Get the current story objective."""
@@ -189,7 +190,7 @@ class StoryManager:
             }}"""
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.background_model.generate_content(prompt)
             result = parse_json_response(response.text)
             return result
             

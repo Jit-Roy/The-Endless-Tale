@@ -66,3 +66,8 @@ class LoadingScreen(QDialog):
     def set_status(self, text: str):
         self._status.setText(text)
         self._status.repaint()
+
+    def closeEvent(self, event):
+        """Ensure dialog is properly hidden when closed."""
+        self.hide()
+        event.accept()

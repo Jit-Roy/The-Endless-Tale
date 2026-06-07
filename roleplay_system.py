@@ -123,6 +123,9 @@ class RoleplaySystem:
                 self.timeline.title = data['title']
             if 'participants' in data:
                 self.timeline.participants = data['participants']
+            if 'current_participants' in data:
+                # Restore who was actively present in the conversation when saved
+                self.timeline.current_participants = data['current_participants']
             if 'timeline_summary' in data:
                 self.timeline.timeline_summary = data['timeline_summary']
             if 'visible_to_user' in data:
@@ -230,7 +233,11 @@ class RoleplaySystem:
             
             # Broadcast all events to characters so they have the full context
             # Replay timeline to track who was present at each point
-            present_at_moment = set(self.timeline.participants)  # Start with all initial participants
+            # Start with the saved "current_participants" if available, otherwise fall back to all participants
+            if getattr(self.timeline, 'current_participants', None):
+                present_at_moment = set(self.timeline.current_participants)
+            else:
+                present_at_moment = set(self.timeline.participants)
             
             for event in self.timeline.events:
                 # Broadcast to whoever was present at this moment
@@ -264,7 +271,7 @@ class RoleplaySystem:
         filepath = self.get_conversation_file_path()
         
         try:
-            from data_models import Message, Scene, Action
+            from data_models import Message, Scene, Action, CharacterEntry, CharacterExit
             
             # Manually construct the data structure to ensure proper serialization
             timeline_data = {
@@ -272,6 +279,7 @@ class RoleplaySystem:
                 "title": self.timeline.title,
                 "events": [],
                 "participants": self.timeline.participants,
+                "current_participants": self.timeline.current_participants,
                 "timeline_summary": self.timeline.timeline_summary,
                 "visible_to_user": self.timeline.visible_to_user
             }
@@ -304,7 +312,6 @@ class RoleplaySystem:
                         "description": event.description
                     }
                 elif isinstance(event, CharacterEntry):
-                    from data_models import CharacterEntry
                     event_data = {
                         "type": "character_entry",
                         "timeline_id": event.timeline_id,
@@ -313,7 +320,6 @@ class RoleplaySystem:
                         "description": event.description
                     }
                 elif isinstance(event, CharacterExit):
-                    from data_models import CharacterExit
                     event_data = {
                         "type": "character_exit",
                         "timeline_id": event.timeline_id,

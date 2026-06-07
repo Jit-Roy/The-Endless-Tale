@@ -44,6 +44,7 @@ class RoleplayWorker(QObject):
         self.story_manager = None
         self._init_config = None   # dict passed from main thread
         self._pending_message = None
+        self._is_shutting_down = False  # Flag to signal shutdown to prevent new operations
 
     # ------------------------------------------------------------------
     # Initialisation (called from worker thread via QThread.started)
@@ -103,6 +104,8 @@ class RoleplayWorker(QObject):
             self.system.turn_manager.on_new_event = lambda ev: self.event_added.emit(self._serialize_event(ev))
             # Stream per-character thinking text
             self.system.turn_manager.on_thinking_update = lambda name, text: self.thinking_update.emit(name, text)
+            # Refresh character and story UI when background tasks complete
+            self.system.turn_manager.on_background_update = self._emit_characters_and_story_update
 
             # Emit existing events (from loaded conversation)
             from data_models import Message, Scene, Action, CharacterEntry, CharacterExit
@@ -124,7 +127,7 @@ class RoleplayWorker(QObject):
     @pyqtSlot(str)
     def send_player_message(self, text: str):
         """Add player message and run AI responses. Called from worker thread."""
-        if not self.system:
+        if not self.system or self._is_shutting_down:
             return
         try:
             self.status_update.emit(f"You said: {text[:60]}…")
@@ -138,6 +141,11 @@ class RoleplayWorker(QObject):
             # Now indicate AI is thinking and run responses
             self.ai_thinking.emit(True)
             self._run_ai_responses()
+            
+            # CRITICAL: Explicit save after AI responses to ensure all messages are persisted
+            # This prevents message loss if the app closes immediately after responses
+            if self.system:
+                self.system._save_conversation()
 
         except Exception as e:
             self.error_occurred.emit(str(e))
@@ -147,12 +155,15 @@ class RoleplayWorker(QObject):
     @pyqtSlot()
     def send_listen(self):
         """Let AI characters continue without player input."""
-        if not self.system:
+        if not self.system or self._is_shutting_down:
             return
         try:
             self.ai_thinking.emit(True)
             self.status_update.emit("Listening quietly…")
             self._run_ai_responses(max_turns=3)
+            # CRITICAL: Explicit save after AI responses
+            if self.system:
+                self.system._save_conversation()
         except Exception as e:
             self.error_occurred.emit(str(e))
         finally:
@@ -161,12 +172,15 @@ class RoleplayWorker(QObject):
     @pyqtSlot()
     def send_skip(self):
         """Skip turn – let AI continue."""
-        if not self.system:
+        if not self.system or self._is_shutting_down:
             return
         try:
             self.ai_thinking.emit(True)
             self.status_update.emit("Skipping turn…")
             self._run_ai_responses(max_turns=3)
+            # CRITICAL: Explicit save after AI responses
+            if self.system:
+                self.system._save_conversation()
         except Exception as e:
             self.error_occurred.emit(str(e))
         finally:
@@ -175,7 +189,7 @@ class RoleplayWorker(QObject):
     @pyqtSlot()
     def reset_conversation(self):
         """Reset the conversation."""
-        if not self.system:
+        if not self.system or self._is_shutting_down:
             return
         try:
             self.status_update.emit("Resetting conversation…")
@@ -201,6 +215,9 @@ class RoleplayWorker(QObject):
             # Now indicate AI is thinking and run responses
             self.ai_thinking.emit(True)
             self._run_ai_responses()
+            # CRITICAL: Explicit save after AI responses
+            if self.system:
+                self.system._save_conversation()
             self._emit_characters_updated()
             self._emit_story_updated()
             self.reset_complete.emit()
@@ -212,7 +229,7 @@ class RoleplayWorker(QObject):
     @pyqtSlot()
     def start_new_session(self):
         """Send initial greeting for a brand new session."""
-        if not self.system:
+        if not self.system or self._is_shutting_down:
             return
         try:
             cfg = self._init_config
@@ -227,6 +244,9 @@ class RoleplayWorker(QObject):
             # Indicate AI is thinking and run responses
             self.ai_thinking.emit(True)
             self._run_ai_responses()
+            # CRITICAL: Explicit save after AI responses
+            if self.system:
+                self.system._save_conversation()
             self._emit_characters_updated()
             self._emit_story_updated()
         except Exception as e:
@@ -237,6 +257,34 @@ class RoleplayWorker(QObject):
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def shutdown(self):
+        """Gracefully shutdown the worker. Called before thread termination.
+        
+        This CRITICAL sequence ensures:
+        1. Background tasks are allowed to complete
+        2. TurnManager shuts down its executor gracefully
+        3. All events (including background-generated) are saved
+        4. New operations are blocked
+        
+        Must be called before the thread is quit to prevent message loss.
+        """
+        # 1. Wait for background tasks to complete in TurnManager
+        if self.system and hasattr(self.system, 'turn_manager'):
+            try:
+                self.system.turn_manager.shutdown()
+            except Exception as e:
+                print(f"[WARNING] Failed to shutdown TurnManager: {e}")
+        
+        # 2. Set flag to stop accepting new operations
+        self._is_shutting_down = True
+        
+        # 3. Final save to ensure all events are persisted
+        if self.system:
+            try:
+                self.system._save_conversation()
+            except Exception as e:
+                print(f"[WARNING] Failed to save during worker shutdown: {e}")
 
     def _on_backend_status(self, text: str):
         """Callback injected into TurnManager to receive status prints."""
@@ -309,46 +357,32 @@ class RoleplayWorker(QObject):
         return base
 
     def _emit_characters_updated(self):
-        """Emit character state for all AI characters."""
+        """Emit characters_updated signal with current character data."""
         if not self.system:
             return
-        result = []
+        chars = []
         for char in self.system.ai_characters:
-            in_scene = char.persona.name in self.system.timeline.current_participants
-            obj = char.state.current_objective if char.state else None
-            result.append({
+            chars.append({
                 "name": char.persona.name,
-                "objective": obj or "—",
-                "in_scene": in_scene,
-                "traits": char.persona.traits[:3] if char.persona.traits else [],
+                "objective": char.state.current_objective if char.state else None,
+                "in_scene": char.persona.name in self.system.timeline.current_participants,
             })
-        self.characters_updated.emit(result)
+        self.characters_updated.emit(chars)
 
     def _emit_story_updated(self):
-        """Emit current story state."""
-        if not self.story_manager or not self.story_manager.story:
-            self.story_updated.emit({
-                "title": "No story loaded",
-                "description": "",
-                "objectives": [],
-                "current_objective": "—",
-                "current_objective_index": 0,
-                "beat_index": 0,
-                "total_beats": 0,
-                "complete": False,
-            })
+        """Emit story_updated signal with current story data."""
+        if not self.system or not self.system.story_manager or not self.system.story_manager.story:
             return
-        story = self.story_manager.story
-        idx   = story.current_objective_index
-        objs  = story.objectives
+        story = self.system.story_manager.story
         self.story_updated.emit({
-            "title":                   story.title,
-            "description":             getattr(story, "description", ""),
-            "objectives":              objs,
-            "current_objective":       objs[idx] if idx < len(objs) else "Story complete",
-            "current_objective_index": idx,
-            "beat_index":              idx + 1,
-            "total_beats":             len(objs),
-            "complete":                self.story_manager.is_story_complete(),
+            "title": story.title,
+            "current_objective": self.system.story_manager.get_current_objective() or "None",
+            "beat_index": story.current_objective_index,
+            "total_beats": len(story.objectives),
+            "complete": self.system.story_manager.is_story_complete(),
         })
 
+    def _emit_characters_and_story_update(self):
+        """Called when background tasks complete."""
+        self._emit_characters_updated()
+        self._emit_story_updated()

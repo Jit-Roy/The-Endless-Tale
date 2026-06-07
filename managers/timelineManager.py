@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from data_models import Message, Scene, Action, TimelineHistory, TimelineEvent, CharacterEntry, CharacterExit
-from gemini_client import GenerativeModel
+from gemini_client import GenerativeModel, Config
 from helpers.response_parser import parse_json_response
 
 
@@ -18,6 +18,7 @@ class TimelineManager:
     def __init__(self):
         """Initialize TimelineManager."""
         self.model = GenerativeModel()
+        self.background_model = GenerativeModel(api_key=Config.BACKGROUND_GOOGLE_API_KEY)
 
     # ========== Timeline Operations ==========
     
@@ -406,7 +407,7 @@ class TimelineManager:
         Decide now based on the timeline above."""
         
         try:
-            response = self.model.generate_content(prompt)
+            response = self.background_model.generate_content(prompt)
             
             try:
                 scene_data = parse_json_response(response.text)
@@ -561,7 +562,7 @@ class TimelineManager:
         If no movements should happen, return: {{"entries": [], "exits": []}}
         Remember: Only include movements that make narrative sense RIGHT NOW."""
         try:
-            response = self.model.generate_content(prompt)
+            response = self.background_model.generate_content(prompt)
             result = parse_json_response(response.text)
             entries = result.get("entries", [])
             exits = result.get("exits", [])

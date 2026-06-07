@@ -242,6 +242,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot(bool, str)
     def _on_load_complete(self, success: bool, error_msg: str):
         self._loading.close()
+        self._loading.hide()  # Explicitly hide the modal dialog
         if not success:
             QMessageBox.critical(self, "Load Error",
                 f"Failed to load The Endless Tale:\n\n{error_msg}")
@@ -398,12 +399,30 @@ class MainWindow(QMainWindow):
         return f
 
     def closeEvent(self, event):
-        if self._worker and self._worker.system:
+        """Handle window close event with proper shutdown sequence to prevent message loss."""
+        # CRITICAL: Graceful shutdown sequence
+        
+        # 1. Signal worker to stop accepting new requests and perform final save
+        if self._worker:
             try:
-                self._worker.system._save_conversation()
+                self._worker.shutdown()  # Sets _is_shutting_down flag and saves
             except Exception as e:
-                print(f"[WARNING] Failed to save on close: {e}")
+                print(f"[WARNING] Worker shutdown error: {e}")
+        
+        # 2. Stop accepting input from UI
+        if self._input_bar:
+            self._input_bar.set_enabled(False)
+        
+        # 3. Wait for worker thread to finish current operations (up to 5 seconds)
         if self._thread and self._thread.isRunning():
+            self._status_lbl.setText("Saving conversation…")
+            # Request thread to quit gracefully
             self._thread.quit()
-            self._thread.wait(3000)
+            # Wait for thread to finish
+            if not self._thread.wait(5000):
+                # If thread doesn't quit gracefully in 5 seconds, force terminate
+                print("[WARNING] Worker thread did not finish gracefully, forcing termination")
+                self._thread.terminate()
+                self._thread.wait(1000)
+        
         super().closeEvent(event)

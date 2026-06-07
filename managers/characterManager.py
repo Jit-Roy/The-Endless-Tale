@@ -215,9 +215,12 @@ class CharacterManager:
         1. **Someone greets the group or asks how everyone is doing** - It's natural to respond as friends!
         2. **Someone reveals important/concerning information** - React with your authentic concern!
         3. **You're directly addressed or mentioned** - Respond naturally!
-        4. **There's been awkward silence** - Someone should break it!
-        5. **The topic is highly relevant to YOU** - Share your unique perspective!
-        6. **Someone needs help or support** - Friends respond to friends!
+        4. **If the user directly names another character, that named character should answer first for this turn.**
+        5. **If you are not the named respondent, remain silent until that character has spoken, unless your response is uniquely essential.**
+        6. **Once the named character has spoken, normal turn-taking resumes.**
+        7. **There's been awkward silence** - Someone should break it!
+        8. **The topic is highly relevant to YOU** - Share your unique perspective!
+        9. **Someone needs help or support** - Friends respond to friends!
         
         WHEN TO ACT (medium priority):
         - You want to react but words feel forced or unnecessary
@@ -235,6 +238,8 @@ class CharacterManager:
         - Someone clearly wants to end a topic and you'd just push it again
         - Another character is better suited to respond to this specific topic
         - The conversation doesn't involve you and you have nothing unique to add
+        - **If a specific character is being asked to speak, let them answer first.**
+        - **If you are not the named respondent, choose silent unless your response is essential.**
         - **Multiple people already said similar things - don't be the third person saying the same thing**
 
         SPECIAL SITUATIONS:
@@ -243,6 +248,7 @@ class CharacterManager:
         - **WITHDRAWAL CONTEXT**: If someone needs rest after revealing something serious, acknowledge both parts
         - **DON'T GANG UP**: If another character already made your exact point, DON'T repeat it - offer a DIFFERENT suggestion or stay quiet
         - **BE INDEPENDENT**: Have your own opinions - don't just echo what others said with slightly different words
+        - **IF YOU ARE NOT DIRECTLY ADDRESSED, DO NOT INTERRUPT**: Let the named character respond first unless your information is essential.
         - **NATURAL FLOW**: Sometimes "Alright, if you say so" or changing subjects IS the right move
         - **CHECK WHAT OTHERS SAID**: Look at the last 2-3 messages. If they already covered your concern, you don't need to repeat it
 
