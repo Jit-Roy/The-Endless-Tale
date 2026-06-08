@@ -530,6 +530,12 @@ class TimelineManager:
         - Character motivations and goals
         - Natural cause-and-effect from recent events
         - Whether the scene/location would attract or repel them
+        
+        CRITICAL LOGICAL RULES:
+        1. You may add ANY character to the "entries" list as long as they are NOT in the "Currently Present" list. This includes characters from the "Absent Characters" list or brand new characters introduced dynamically. DO NOT enter someone who is already present.
+        2. You may ONLY add characters to the "exits" list if they are currently in the "Currently Present" list. DO NOT exit someone who is already absent.
+        3. If characters are talking to an absent character as if they are present, you MUST generate an "entry" event for that absent character so they officially join the scene.
+        
         CRITICAL ENTRY DESCRIPTION RULES:
         For character ENTRIES, the description MUST include what the entering character can PHYSICALLY OBSERVE:
         1. **Location/Environment** - Brief description of where they are (the room, surroundings)
