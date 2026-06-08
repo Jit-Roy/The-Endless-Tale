@@ -199,16 +199,6 @@ class RoleplaySystem:
                         description=event_data['description']
                     )
                     self.timeline.events.append(scene)
-                elif event_type == 'action' or ('character' in event_data and 'description' in event_data):
-                    # This is an Action
-                    from data_models import Action
-                    action = Action(
-                        timeline_id=event_data.get('timeline_id'),
-                        timestamp=datetime.fromisoformat(event_data['timestamp']) if 'timestamp' in event_data else datetime.now(),
-                        character=event_data['character'],
-                        description=event_data['description']
-                    )
-                    self.timeline.events.append(action)
                 elif event_type == 'character_entry':
                     # This is a CharacterEntry
                     from data_models import CharacterEntry
@@ -226,10 +216,29 @@ class RoleplaySystem:
                         timeline_id=event_data.get('timeline_id'),
                         timestamp=datetime.fromisoformat(event_data['timestamp']) if 'timestamp' in event_data else datetime.now(),
                         character=event_data['character'],
-                        description=event_data['description'],
-                        reason=event_data.get('reason')
+                        description=event_data['description']
                     )
                     self.timeline.events.append(exit_event)
+                elif event_type == 'action':
+                    # This is an Action
+                    from data_models import Action
+                    action = Action(
+                        timeline_id=event_data.get('timeline_id'),
+                        timestamp=datetime.fromisoformat(event_data['timestamp']) if 'timestamp' in event_data else datetime.now(),
+                        character=event_data['character'],
+                        description=event_data['description']
+                    )
+                    self.timeline.events.append(action)
+                elif 'character' in event_data and 'description' in event_data:
+                    # Legacy fallback for untyped events: assume an action if the event has a character and description
+                    from data_models import Action
+                    action = Action(
+                        timeline_id=event_data.get('timeline_id'),
+                        timestamp=datetime.fromisoformat(event_data['timestamp']) if 'timestamp' in event_data else datetime.now(),
+                        character=event_data['character'],
+                        description=event_data['description']
+                    )
+                    self.timeline.events.append(action)
             
             # Broadcast all events to characters so they have the full context
             # Replay timeline to track who was present at each point

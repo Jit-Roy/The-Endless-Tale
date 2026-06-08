@@ -30,8 +30,8 @@ ACTION_TEXT = "#888888"
 ACTION_BRD  = "#252525"
 
 
-def _icon_btn(symbol: str, tooltip: str = "") -> QLabel:
-    btn = QLabel(symbol)
+def _icon_btn(symbol: str, tooltip: str = "", parent=None) -> QLabel:
+    btn = QLabel(symbol, parent)
     btn.setAlignment(Qt.AlignCenter)
     btn.setFixedSize(28, 28)
     btn.setToolTip(tooltip)
@@ -173,7 +173,7 @@ class InputBar(QWidget):
         box_layout.setSpacing(6)
 
         # Placeholder + edit
-        self._placeholder = QLabel(f"What do you do or say?")
+        self._placeholder = QLabel(f"What do you do or say?", self)
         self._placeholder.setStyleSheet(f"""
             color: {TEXT_PLACE};
             font-size: 14px;
@@ -199,7 +199,7 @@ class InputBar(QWidget):
         toolbar.setSpacing(4)
 
         # Enter hint
-        hint = QLabel("Enter to send")
+        hint = QLabel("Enter to send", self)
         hint.setStyleSheet(f"""
             color: {TEXT_HINT};
             font-size: 11px;

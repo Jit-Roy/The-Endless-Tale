@@ -9,6 +9,17 @@ from PyQt5.QtWidgets import (
     QLabel, QFrame, QSizePolicy
 )
 from PyQt5.QtCore import Qt, QTimer
+from pathlib import Path
+import time, traceback, json
+
+# Debug log for UI insert events
+_ui_log_path = Path(__file__).parent.parent / "ui_debug.log"
+def _ui_log(msg: str):
+    try:
+        with open(_ui_log_path, "a", encoding="utf-8") as f:
+            f.write(f"{time.time()} {msg}\n")
+    except Exception:
+        pass
 
 # ── Palette ─────────────────────────────────────────────────────────────────
 MAIN_BG      = "#161616"
@@ -33,9 +44,9 @@ def _fmt_ts(ts_str: str) -> str:
 
 
 def _badge(symbol: str, size: int = 30, bg: str = "#222222",
-           fg: str = "#666666", font_size: int = 11) -> QLabel:
+           fg: str = "#666666", font_size: int = 11, parent=None) -> QLabel:
     """Circular icon badge."""
-    lbl = QLabel(symbol)
+    lbl = QLabel(symbol, parent)
     lbl.setFixedSize(size, size)
     lbl.setAlignment(Qt.AlignCenter)
     lbl.setStyleSheet(f"""
@@ -49,11 +60,11 @@ def _badge(symbol: str, size: int = 30, bg: str = "#222222",
     return lbl
 
 
-def _avatar(name: str, size: int = 34) -> QLabel:
+def _avatar(name: str, size: int = 34, parent=None) -> QLabel:
     """Circular avatar with initials."""
     parts = name.split()
     initials = (parts[0][0] + (parts[1][0] if len(parts) > 1 else "")).upper()
-    lbl = QLabel(initials)
+    lbl = QLabel(initials, parent)
     lbl.setFixedSize(size, size)
     lbl.setAlignment(Qt.AlignCenter)
     lbl.setStyleSheet(f"""
@@ -70,8 +81,8 @@ def _avatar(name: str, size: int = 34) -> QLabel:
     return lbl
 
 
-def _ts_label(ts: str) -> QLabel:
-    lbl = QLabel(ts)
+def _ts_label(ts: str, parent=None) -> QLabel:
+    lbl = QLabel(ts, parent)
     lbl.setStyleSheet(
         f"color: {TEXT_TS}; font-size: 10px; font-family: 'Segoe UI', sans-serif;"
         f"color: {TEXT_TS}; font-size: 11px; font-family: 'Segoe UI', sans-serif;"
@@ -80,8 +91,8 @@ def _ts_label(ts: str) -> QLabel:
     return lbl
 
 
-def _tag_label(text: str) -> QLabel:
-    lbl = QLabel(text)
+def _tag_label(text: str, parent=None) -> QLabel:
+    lbl = QLabel(text, parent)
     lbl.setStyleSheet(f"""
         color: {TEXT_MUTED};
         font-size: 11px;
@@ -94,10 +105,10 @@ def _tag_label(text: str) -> QLabel:
 
 def _text(content: str, color: str = TEXT_PRIMARY,
           size: int = 14, italic: bool = False,
-          bold: bool = False) -> QLabel:
+          bold: bool = False, parent=None) -> QLabel:
     weight = "bold" if bold else "normal"
     style_flag = "italic" if italic else "normal"
-    lbl = QLabel(content)
+    lbl = QLabel(content, parent)
     lbl.setWordWrap(True)
     lbl.setAlignment(Qt.AlignLeft | Qt.AlignTop)
     lbl.setStyleSheet(f"""
@@ -143,24 +154,24 @@ class SceneCard(_Card):
         # Header
         hdr = QHBoxLayout()
         hdr.setSpacing(10)
-        hdr.addWidget(_badge("⛰", 28, "#1e1e1e", "#555555", 11))
+        hdr.addWidget(_badge("⛰", 28, "#1e1e1e", "#555555", 11, self))
 
         tag_col = QVBoxLayout()
         tag_col.setSpacing(0)
-        tag_col.addWidget(_tag_label(f"SCENE  ·  {scene_type}"))
+        tag_col.addWidget(_tag_label(f"SCENE  ·  {scene_type}", self))
         if location:
-            loc_lbl = QLabel(location)
+            loc_lbl = QLabel(location, self)
             loc_lbl.setStyleSheet(
                 f"color: #666666; font-size: 11px; font-family: 'Segoe UI', sans-serif;"
             )
             tag_col.addWidget(loc_lbl)
         hdr.addLayout(tag_col)
         hdr.addStretch()
-        hdr.addWidget(_ts_label(ts))
+        hdr.addWidget(_ts_label(ts, self))
         layout.addLayout(hdr)
 
         # Description
-        layout.addWidget(_text(desc, "#888888", 13, italic=True))
+        layout.addWidget(_text(desc, "#888888", 13, italic=True, parent=self))
 
 
 class PlayerCard(_Card):
@@ -176,19 +187,19 @@ class PlayerCard(_Card):
         # Header
         hdr = QHBoxLayout()
         hdr.setSpacing(10)
-        hdr.addWidget(_badge("◎", 28, "#222222", "#888888", 13))
+        hdr.addWidget(_badge("◎", 28, "#222222", "#888888", 13, self))
 
-        you_lbl = QLabel("YOU")
+        you_lbl = QLabel("YOU", self)
         you_lbl.setStyleSheet(
             f"color: {TEXT_PRIMARY}; font-size: 12px; font-weight: bold; "
             "letter-spacing: 1px; font-family: 'Segoe UI', sans-serif;"
         )
         hdr.addWidget(you_lbl)
         hdr.addStretch()
-        hdr.addWidget(_ts_label(ts))
+        hdr.addWidget(_ts_label(ts, self))
         layout.addLayout(hdr)
 
-        layout.addWidget(_text(dialogue, TEXT_PRIMARY, 14))
+        layout.addWidget(_text(dialogue, TEXT_PRIMARY, 14, parent=self))
 
 
 class CharacterCard(_Card):
@@ -208,7 +219,7 @@ class CharacterCard(_Card):
         top_row.setSpacing(10)
         top_row.setAlignment(Qt.AlignTop)
 
-        av = _avatar(character, 34)
+        av = _avatar(character, 34, self)
         top_row.addWidget(av, 0, Qt.AlignTop)
 
         info_col = QVBoxLayout()
@@ -217,25 +228,25 @@ class CharacterCard(_Card):
         # Name + timestamp
         name_row = QHBoxLayout()
         name_row.setSpacing(0)
-        name_lbl = QLabel(character.upper())
+        name_lbl = QLabel(character.upper(), self)
         name_lbl.setStyleSheet(
             f"color: {TEXT_PRIMARY}; font-size: 12px; font-weight: bold; "
             "letter-spacing: 0.8px; font-family: 'Segoe UI', sans-serif;"
         )
         name_row.addWidget(name_lbl)
         name_row.addStretch()
-        name_row.addWidget(_ts_label(ts))
+        name_row.addWidget(_ts_label(ts, self))
         info_col.addLayout(name_row)
 
         # Action (italic gray)
         if action and action.lower() not in ("speaks", ""):
             info_col.addSpacing(2)
-            info_col.addWidget(_text(action, TEXT_ACTION, 12, italic=True))
+            info_col.addWidget(_text(action, TEXT_ACTION, 12, italic=True, parent=self))
 
         # Dialogue
         if dialogue:
             info_col.addSpacing(5)
-            info_col.addWidget(_text(dialogue, TEXT_PRIMARY, 14))
+            info_col.addWidget(_text(dialogue, TEXT_PRIMARY, 14, parent=self))
 
         top_row.addLayout(info_col, stretch=1)
         layout.addLayout(top_row)
@@ -254,13 +265,13 @@ class ActionCard(_Card):
 
         hdr = QHBoxLayout()
         hdr.setSpacing(10)
-        hdr.addWidget(_badge("⬡", 28, "#1e1e1e", "#4a4a4a", 11))
-        hdr.addWidget(_tag_label("ACTION  ·  SYSTEM"))
+        hdr.addWidget(_badge("⬡", 28, "#1e1e1e", "#4a4a4a", 11, self))
+        hdr.addWidget(_tag_label("ACTION  ·  SYSTEM", self))
         hdr.addStretch()
-        hdr.addWidget(_ts_label(ts))
+        hdr.addWidget(_ts_label(ts, self))
         layout.addLayout(hdr)
 
-        layout.addWidget(_text(f"{character} {desc}", "#777777", 13, italic=True))
+        layout.addWidget(_text(f"{character} {desc}", "#777777", 13, italic=True, parent=self))
 
 
 class MovementCard(_Card):
@@ -276,16 +287,16 @@ class MovementCard(_Card):
         ts        = _fmt_ts(event.get("timestamp", ""))
 
         arrow = "→" if is_entry else "←"
-        layout.addWidget(_badge(arrow, 24, "#1a1a1a", "#444444", 10))
+        layout.addWidget(_badge(arrow, 24, "#1a1a1a", "#444444", 10, self))
 
         verb = "entered" if is_entry else "left"
-        txt  = QLabel(f"{character} {verb}: {desc}")
+        txt  = QLabel(f"{character} {verb}: {desc}", self)
         txt.setWordWrap(True)
         txt.setStyleSheet(
             f"color: #4a4a4a; font-size: 11px; font-style: italic; font-family: 'Segoe UI', sans-serif;"
         )
         layout.addWidget(txt, stretch=1)
-        layout.addWidget(_ts_label(ts))
+        layout.addWidget(_ts_label(ts, self))
 
 
 class SystemMsg(QWidget):
@@ -293,7 +304,7 @@ class SystemMsg(QWidget):
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 3, 14, 3)
-        lbl = QLabel(text)
+        lbl = QLabel(text, self)
         lbl.setAlignment(Qt.AlignCenter)
         lbl.setStyleSheet(
             f"color: {TEXT_MUTED}; font-size: 10px; font-style: italic; font-family: 'Segoe UI', sans-serif;"
@@ -317,13 +328,13 @@ class ObjectiveCard(QFrame):
         layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(4)
 
-        name_lbl = QLabel(character_name)
+        name_lbl = QLabel(character_name, self)
         name_lbl.setStyleSheet(
             "color: #e8e8e8; font-size: 12px; font-weight: bold; font-family: 'Segoe UI', sans-serif;"
         )
         layout.addWidget(name_lbl)
 
-        objective_lbl = QLabel(objective)
+        objective_lbl = QLabel(objective, self)
         objective_lbl.setWordWrap(True)
         objective_lbl.setStyleSheet(
             "color: #bfc0c2; font-size: 13px; font-family: 'Segoe UI', sans-serif; line-height: 1.4;"
@@ -404,7 +415,7 @@ class ObjectiveView(QScrollArea):
         for char in characters:
             name = char.get("name", "Unknown")
             objective = char.get("objective", "—")
-            self._list_layout.addWidget(ObjectiveCard(name, objective))
+            self._list_layout.addWidget(ObjectiveCard(name, objective, self._objectives_list))
 
 
 # ── Main scroll container ─────────────────────────────────────────────────────
@@ -454,23 +465,27 @@ class ChatDisplay(QScrollArea):
     def append_event(self, event: dict):
         t    = event.get("type", "")
         char = event.get("character", "")
+        try:
+            _ui_log(f"append_event: type={t} char={char} keys={list(event.keys())} dialouge_len={len(event.get('dialouge',''))}")
+        except Exception:
+            pass
 
         if t == "message":
-            card = PlayerCard(event, self.player_name) if char == self.player_name \
-                   else CharacterCard(event)
+            card = PlayerCard(event, self.player_name, self._content) if char == self.player_name \
+                   else CharacterCard(event, self._content)
         elif t == "scene":
-            card = SceneCard(event)
+            card = SceneCard(event, self._content)
         elif t == "action":
-            card = ActionCard(event)
+            card = ActionCard(event, self._content)
         elif t in ("character_entry", "character_exit"):
-            card = MovementCard(event)
+            card = MovementCard(event, self._content)
         else:
             return
 
         self._insert(card)
 
     def append_system(self, text: str):
-        self._insert(SystemMsg(text))
+        self._insert(SystemMsg(text, self._content))
 
     def clear_display(self):
         while self._layout.count() > 1:
@@ -482,12 +497,20 @@ class ChatDisplay(QScrollArea):
 
     def _insert(self, widget: QWidget):
         # Insert the widget before the stretch at the end
+        try:
+            _ui_log(f"_insert: widget={widget.__class__.__name__} layout_count={self._layout.count()}")
+        except Exception:
+            pass
         self._layout.insertWidget(self._layout.count() - 1, widget)
         # Auto-scroll only if the user is already at (or near) the bottom.
         sb = self.verticalScrollBar()
         at_bottom = sb.value() >= (sb.maximum() - 80)
         if at_bottom:
             QTimer.singleShot(40, self._scroll_bottom)
+        try:
+            _ui_log(f"_insert: scheduled scroll at_bottom={at_bottom} sb={sb.value()}/{sb.maximum()}")
+        except Exception:
+            pass
 
     def _scroll_bottom(self):
         self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())

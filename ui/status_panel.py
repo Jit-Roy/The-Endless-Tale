@@ -29,8 +29,8 @@ def _divider() -> QFrame:
     return f
 
 
-def _section_lbl(text: str) -> QLabel:
-    lbl = QLabel(text)
+def _section_lbl(text: str, parent=None) -> QLabel:
+    lbl = QLabel(text, parent)
     lbl.setStyleSheet(f"""
         color: {TEXT_LABEL};
         font-size: 10px;
@@ -41,10 +41,10 @@ def _section_lbl(text: str) -> QLabel:
     return lbl
 
 
-def _avatar_circle(name: str, size: int = 38) -> QLabel:
+def _avatar_circle(name: str, size: int = 38, parent=None) -> QLabel:
     parts    = name.split()
     initials = (parts[0][0] + (parts[1][0] if len(parts) > 1 else "")).upper()
-    lbl = QLabel(initials)
+    lbl = QLabel(initials, parent)
     lbl.setFixedSize(size, size)
     lbl.setAlignment(Qt.AlignCenter)
     lbl.setStyleSheet(f"""
@@ -78,14 +78,13 @@ class CharacterCard(QFrame):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
-        # Avatar
-        layout.addWidget(_avatar_circle(data.get("name", "?")))
+        layout.addWidget(_avatar_circle(data.get("name", "?"), parent=self))
 
         # Info column
         info = QVBoxLayout()
         info.setSpacing(2)
 
-        name_lbl = QLabel(data.get("name", "—"))
+        name_lbl = QLabel(data.get("name", "—"), self)
         name_lbl.setStyleSheet(f"""
             color: {TEXT_PRIMARY};
             font-size: 13px;
@@ -97,7 +96,7 @@ class CharacterCard(QFrame):
         # Traits / role
         traits = data.get("traits", [])
         role_txt = "  ·  ".join(traits[:2]) if traits else "Character"
-        role_lbl = QLabel(role_txt)
+        role_lbl = QLabel(role_txt, self)
         role_lbl.setStyleSheet(f"""
             color: {TEXT_SEC};
             font-size: 11px;
@@ -109,12 +108,12 @@ class CharacterCard(QFrame):
         in_scene = data.get("in_scene", True)
         status_row = QHBoxLayout()
         status_row.setSpacing(5)
-        dot = QLabel("●")
+        dot = QLabel("●", self)
         dot.setStyleSheet(
             f"color: {PRESENT_DOT if in_scene else ABSENT_DOT}; font-size: 7px;"
         )
         status_row.addWidget(dot)
-        stat_lbl = QLabel("Present" if in_scene else "Away")
+        stat_lbl = QLabel("Present" if in_scene else "Away", self)
         stat_lbl.setStyleSheet(f"""
             color: {TEXT_MUTED};
             font-size: 11px;
@@ -136,7 +135,7 @@ class SectionHeader(QWidget):
         layout.setContentsMargins(0, 6, 0, 6)
         layout.setSpacing(6)
 
-        lbl = QLabel(f"{title}  ({count})")
+        lbl = QLabel(f"{title}  ({count})", self)
         lbl.setStyleSheet(f"""
             color: {TEXT_MUTED};
             font-size: 11px;
@@ -147,7 +146,7 @@ class SectionHeader(QWidget):
         layout.addWidget(lbl)
         layout.addStretch()
 
-        arrow = QLabel("∨")
+        arrow = QLabel("∨", self)
         arrow.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 10px;")
         layout.addWidget(arrow)
 
@@ -215,11 +214,11 @@ class StatusPanel(QWidget):
         self._char_layout.addStretch()
 
         # Present section header
-        self._present_header = SectionHeader("PRESENT", 0)
+        self._present_header = SectionHeader("PRESENT", 0, char_body)
         self._char_layout.insertWidget(0, self._present_header)
 
         # Absent section (inserted after present cards)
-        self._absent_header = SectionHeader("ABSENT", 0)
+        self._absent_header = None
 
         char_scroll.setWidget(char_body)
         outer.addWidget(char_scroll, stretch=1)
@@ -249,18 +248,20 @@ class StatusPanel(QWidget):
         while layout.count() > 1:
             item = layout.takeAt(0)
             if item.widget():
-                item.widget().setParent(None)
+                w = item.widget()
+                w.setParent(None)
+                w.deleteLater()
 
         # Rebuild
         insert_pos = 0
 
         # Present section
-        self._present_header = SectionHeader("PRESENT", len(present))
+        self._present_header = SectionHeader("PRESENT", len(present), layout.parentWidget())
         layout.insertWidget(insert_pos, self._present_header)
         insert_pos += 1
 
         for data in present:
-            card = CharacterCard(data)
+            card = CharacterCard(data, layout.parentWidget())
             layout.insertWidget(insert_pos, card)
             self._cards[data["name"]] = card
             insert_pos += 1
@@ -269,11 +270,11 @@ class StatusPanel(QWidget):
         if absent:
             layout.insertSpacing(insert_pos, 6)
             insert_pos += 1
-            self._absent_header = SectionHeader("ABSENT", len(absent))
+            self._absent_header = SectionHeader("ABSENT", len(absent), layout.parentWidget())
             layout.insertWidget(insert_pos, self._absent_header)
             insert_pos += 1
             for data in absent:
-                card = CharacterCard(data)
+                card = CharacterCard(data, layout.parentWidget())
                 layout.insertWidget(insert_pos, card)
                 self._cards[data["name"]] = card
                 insert_pos += 1

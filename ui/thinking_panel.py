@@ -21,7 +21,7 @@ class ThinkingPanel(QWidget):
         self._layout.setContentsMargins(8, 8, 8, 8)
         self._layout.setSpacing(6)
 
-        header = QLabel("Thinking")
+        header = QLabel("Thinking", self)
         header.setStyleSheet(f"color: {TEXT_PRIMARY}; font-weight: bold; font-size: 12px;")
         self._layout.addWidget(header)
 
@@ -39,7 +39,7 @@ class ThinkingPanel(QWidget):
                 timer.start()
             return
 
-        lbl = QLabel(f"{name}: {text}")
+        lbl = QLabel(f"{name}: {text}", self)
         lbl.setWordWrap(True)
         lbl.setStyleSheet(f"color: {TEXT_MUTED}; font-style: italic; font-size: 12px;")
         self._layout.addWidget(lbl)
