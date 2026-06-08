@@ -1,18 +1,151 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Endless Tale</title>
+    <meta name="description" content="An AI-powered interactive fiction and storytelling engine that brings characters to life through dynamic conversations and objective-driven gameplay.">
     <meta name="google-site-verification" content="d94117fd30831cd6" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>The Endless Tale</h1>
-    <p>AI-powered interactive storytelling engine.</p>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo">The Endless Tale</div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#getting-started">Getting Started</a>
+            <a href="https://github.com/Jit-Roy/The-Endless-Tale" class="btn btn-outline" target="_blank" rel="noopener">GitHub</a>
+        </div>
+    </nav>
 
-    <p>
-        <a href="https://github.com/Jit-Roy/The-Endless-Tale">
-            View Repository
-        </a>
-    </p>
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-content">
+            <div class="badges">
+                <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python">
+                <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+                <img src="https://img.shields.io/badge/powered%20by-Google%20Gemini-blue" alt="Google Gemini">
+            </div>
+            <h1 class="gradient-text">The Endless Tale</h1>
+            <h2>An Interactive Story Adventure</h2>
+            <p>An AI-powered interactive fiction and storytelling engine that brings characters to life through dynamic conversations and objective-driven gameplay.</p>
+            <div class="hero-buttons">
+                <a href="#getting-started" class="btn btn-primary">Get Started</a>
+                <a href="https://github.com/Jit-Roy/The-Endless-Tale" class="btn btn-secondary" target="_blank" rel="noopener">View Source</a>
+            </div>
+        </div>
+        <div class="hero-image-container">
+            <img src="image/Banner.png" alt="The Endless Tale Banner" class="hero-banner">
+            <div class="glow-effect"></div>
+        </div>
+    </header>
+
+    <!-- Screenshot Section -->
+    <section class="screenshot-section">
+        <div class="container">
+            <div class="glass-panel">
+                <img src="image/Screenshot.png" alt="The Endless Tale Screenshot" class="app-screenshot">
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Immersive Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎮</div>
+                    <h3>Gamified Experience</h3>
+                    <p>Blends traditional AI chat with structured gameplay. Your actions are constantly evaluated against specific story objectives you must complete to advance the narrative.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Autonomous Character AI</h3>
+                    <p>Every character possesses their own distinct personality, independent thought process, and unique way of analyzing and reacting to the evolving situation.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Dynamic World State</h3>
+                    <p>The environment naturally shifts around you as time passes, scenes transition, and characters autonomously decide to enter or leave your current location.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Getting Started -->
+    <section id="getting-started" class="getting-started">
+        <div class="container">
+            <h2 class="section-title">Getting Started</h2>
+            
+            <div class="setup-steps">
+                <div class="step">
+                    <h3>1. Prerequisites</h3>
+                    <ul>
+                        <li>Python 3.10+</li>
+                        <li>Google Gemini API key</li>
+                    </ul>
+                </div>
+                
+                <div class="step">
+                    <h3>2. Installation</h3>
+                    <div class="code-block">
+                        <pre><code>git clone https://github.com/Jit-Roy/The-Endless-Tale.git
+cd "The Endless Tale"
+pip install -r requirements.txt</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>3. Environment Variables</h3>
+                    <p>Create a <code>.env</code> file in the root directory and add your Google Gemini API keys:</p>
+                    <div class="code-block">
+                        <pre><code>GOOGLE_API_KEY=your_primary_api_key_here
+BACKGROUND_GOOGLE_API_KEY=your_background_api_key_here</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>4. Run the Engine</h3>
+                    <div class="code-block">
+                        <pre><code>python app.py</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Custom Stories -->
+    <section class="custom-stories">
+        <div class="container glass-panel">
+            <h2>Creating Custom Stories & Characters</h2>
+            <p>You can easily build your own dynamic adventures by defining a story directory with JSON files.</p>
+            <div class="code-block json">
+                <pre><code>{
+    "title": "Space Odyssey",
+    "description": "A journey to the stars.",
+    "objectives": [
+        "Wake up from cryo-sleep",
+        "Fix the main engine",
+        "Navigate the asteroid field"
+    ]
+}</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="performance-note">
+                <strong>Performance Note:</strong> Because the system manages an intricate, dynamic world—evaluating heavy narrative context, tracking objectives, and generating parallel decisions—API calls are computationally intensive. <strong>On average, it takes about 40 seconds for a new message to appear in the UI.</strong> Please be patient while the engine computes the next phase!
+            </div>
+            <p>&copy; The Endless Tale. Released under the MIT License.</p>
+        </div>
+    </footer>
 </body>
 </html>
