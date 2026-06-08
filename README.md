@@ -1,5 +1,7 @@
 # The Endless Tale - An Interactive Story Adventure
 
+![The Endless Tale Banner](docs/image/Banner.png)
+
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/Jit-Roy/The-Endless-Tale/pulls)
@@ -7,14 +9,9 @@
 
 An AI-powered interactive fiction and storytelling engine that brings characters to life through dynamic conversations and objective-driven gameplay. 
 
-## Screenshots
+## Screenshot
 
-<table>
-  <tr>
-    <td><img src="docs/image/1.jpg" alt="The Endless Tale Screenshot 1" width="100%"/></td>
-    <td><img src="docs/image/2.jpg" alt="The Endless Tale Screenshot 2" width="100%"/></td>
-  </tr>
-</table>
+![The Endless Tale Screenshot](docs/image/Screenshot.png)
 
 ## Features
 
