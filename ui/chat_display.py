@@ -93,8 +93,7 @@ def _avatar(name: str, size: int = 34, parent=None) -> QLabel:
 def _ts_label(ts: str, parent=None) -> QLabel:
     lbl = QLabel(ts, parent)
     lbl.setStyleSheet(
-        f"color: {TEXT_TS}; font-size: 10px; font-family: 'Segoe UI', sans-serif;"
-        f"color: {TEXT_TS}; font-size: 11px; font-family: 'Segoe UI', sans-serif;"
+        f"color: {TEXT_TS}; font-size: 11px; font-family: 'Segoe UI', sans-serif; background-color: transparent;"
     )
     lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
     return lbl
@@ -108,6 +107,7 @@ def _tag_label(text: str, parent=None) -> QLabel:
         font-weight: bold;
         letter-spacing: 1.2px;
         font-family: 'Segoe UI', sans-serif;
+        background-color: transparent;
     """)
     return lbl
 
@@ -127,6 +127,7 @@ def _text(content: str, color: str = TEXT_PRIMARY,
         font-weight: {weight};
         font-family: 'Segoe UI', sans-serif;
         line-height: 1.5;
+        background-color: transparent;
     """)
     return lbl
 
@@ -160,10 +161,19 @@ class SceneCard(_Card):
         desc       = event.get("description", "")
         ts         = _fmt_ts(event.get("timestamp", ""))
 
-        # Header
         hdr = QHBoxLayout()
         hdr.setSpacing(10)
-        hdr.addWidget(_badge("⛰", 28, "#1e1e1e", "#555555", 11, self))
+        
+        from pathlib import Path
+        from PyQt5.QtGui import QPixmap
+        scene_icon = QLabel()
+        icon_path = str(Path(__file__).parent / "icons" / "scene.svg")
+        pixmap = QPixmap(icon_path).scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        scene_icon.setPixmap(pixmap)
+        scene_icon.setFixedSize(28, 28)
+        scene_icon.setAlignment(Qt.AlignCenter)
+        scene_icon.setStyleSheet("QLabel { background-color: #1e1e1e; border-radius: 14px; }")
+        hdr.addWidget(scene_icon)
 
         tag_col = QVBoxLayout()
         tag_col.setSpacing(0)
@@ -201,7 +211,7 @@ class PlayerCard(_Card):
         you_lbl = QLabel("YOU", self)
         you_lbl.setStyleSheet(
             f"color: {TEXT_PRIMARY}; font-size: 12px; font-weight: bold; "
-            "letter-spacing: 1px; font-family: 'Segoe UI', sans-serif;"
+            "letter-spacing: 1px; font-family: 'Segoe UI', sans-serif; background-color: transparent;"
         )
         hdr.addWidget(you_lbl)
         hdr.addStretch()
@@ -240,7 +250,7 @@ class CharacterCard(_Card):
         name_lbl = QLabel(character.upper(), self)
         name_lbl.setStyleSheet(
             f"color: {TEXT_PRIMARY}; font-size: 12px; font-weight: bold; "
-            "letter-spacing: 0.8px; font-family: 'Segoe UI', sans-serif;"
+            "letter-spacing: 0.8px; font-family: 'Segoe UI', sans-serif; background-color: transparent;"
         )
         name_row.addWidget(name_lbl)
         name_row.addStretch()
@@ -302,7 +312,7 @@ class MovementCard(_Card):
         txt  = QLabel(f"{character} {verb}: {desc}", self)
         txt.setWordWrap(True)
         txt.setStyleSheet(
-            f"color: #4a4a4a; font-size: 11px; font-style: italic; font-family: 'Segoe UI', sans-serif;"
+            f"color: #4a4a4a; font-size: 11px; font-style: italic; font-family: 'Segoe UI', sans-serif; background-color: transparent;"
         )
         layout.addWidget(txt, stretch=1)
         layout.addWidget(_ts_label(ts, self))
@@ -326,7 +336,7 @@ class ObjectiveCard(QFrame):
         super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.setStyleSheet(f"""
-            QFrame {{
+            ObjectiveCard {{
                 background-color: {CARD_BG};
                 border: 1px solid {BORDER};
                 border-radius: 10px;
@@ -339,14 +349,14 @@ class ObjectiveCard(QFrame):
 
         name_lbl = QLabel(character_name, self)
         name_lbl.setStyleSheet(
-            "color: #e8e8e8; font-size: 12px; font-weight: bold; font-family: 'Segoe UI', sans-serif;"
+            "color: #e8e8e8; font-size: 12px; font-weight: bold; font-family: 'Segoe UI', sans-serif; background-color: transparent;"
         )
         layout.addWidget(name_lbl)
 
         objective_lbl = QLabel(objective, self)
         objective_lbl.setWordWrap(True)
         objective_lbl.setStyleSheet(
-            "color: #bfc0c2; font-size: 13px; font-family: 'Segoe UI', sans-serif; line-height: 1.4;"
+            "color: #bfc0c2; font-size: 13px; font-family: 'Segoe UI', sans-serif; line-height: 1.4; background-color: transparent;"
         )
         layout.addWidget(objective_lbl)
 

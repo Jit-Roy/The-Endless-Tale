@@ -90,6 +90,7 @@ class CharacterCard(QFrame):
             font-size: 13px;
             font-weight: bold;
             font-family: 'Segoe UI', sans-serif;
+            background-color: transparent;
         """)
         info.addWidget(name_lbl)
 
@@ -101,6 +102,7 @@ class CharacterCard(QFrame):
             color: {TEXT_SEC};
             font-size: 11px;
             font-family: 'Segoe UI', sans-serif;
+            background-color: transparent;
         """)
         info.addWidget(role_lbl)
 
@@ -110,7 +112,7 @@ class CharacterCard(QFrame):
         status_row.setSpacing(5)
         dot = QLabel("●", self)
         dot.setStyleSheet(
-            f"color: {PRESENT_DOT if in_scene else ABSENT_DOT}; font-size: 7px;"
+            f"color: {PRESENT_DOT if in_scene else ABSENT_DOT}; font-size: 7px; background-color: transparent;"
         )
         status_row.addWidget(dot)
         stat_lbl = QLabel("Present" if in_scene else "Away", self)
@@ -118,6 +120,7 @@ class CharacterCard(QFrame):
             color: {TEXT_MUTED};
             font-size: 11px;
             font-family: 'Segoe UI', sans-serif;
+            background-color: transparent;
         """)
         status_row.addWidget(stat_lbl)
         status_row.addStretch()
@@ -172,8 +175,14 @@ class StatusPanel(QWidget):
         hl.setContentsMargins(14, 0, 14, 0)
         hl.setSpacing(8)
 
-        people_icon = QLabel("👥")
-        people_icon.setStyleSheet("font-size: 13px; color: #555555;")
+        from pathlib import Path
+        from PyQt5.QtGui import QPixmap
+        
+        people_icon = QLabel()
+        icon_path = str(Path(__file__).parent / "icons" / "characters.svg")
+        pixmap = QPixmap(icon_path).scaled(16, 16, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        people_icon.setPixmap(pixmap)
+        people_icon.setFixedSize(16, 16)
         hl.addWidget(people_icon)
 
         hdr_lbl = QLabel("CHARACTERS")
