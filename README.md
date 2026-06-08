@@ -1,3 +1,5 @@
+<div align="center">
+
 # The Endless Tale - An Interactive Story Adventure
 
 ![The Endless Tale Banner](docs/image/Banner.png)
@@ -6,6 +8,8 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/Jit-Roy/The-Endless-Tale/pulls)
 [![Google Gemini](https://img.shields.io/badge/powered%20by-Google%20Gemini-blue)](https://developers.generativeai.google/)
+
+</div>
 
 An AI-powered interactive fiction and storytelling engine that brings characters to life through dynamic conversations and objective-driven gameplay. 
 
