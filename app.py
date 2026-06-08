@@ -13,12 +13,14 @@ import io
 # ── Force UTF-8 on Windows (prevents charmap errors from emoji in backend code) ──
 if sys.platform == "win32":
     # Reconfigure stdout/stderr to UTF-8, escaping unencodable characters
-    sys.stdout = io.TextIOWrapper(
-        sys.stdout.buffer, encoding="utf-8", errors="backslashreplace"
-    )
-    sys.stderr = io.TextIOWrapper(
-        sys.stderr.buffer, encoding="utf-8", errors="backslashreplace"
-    )
+    if sys.stdout is not None:
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.buffer, encoding="utf-8", errors="backslashreplace"
+        )
+    if sys.stderr is not None:
+        sys.stderr = io.TextIOWrapper(
+            sys.stderr.buffer, encoding="utf-8", errors="backslashreplace"
+        )
     os.environ["PYTHONIOENCODING"] = "utf-8"
 
 # Ensure the project root is on the path
