@@ -25,6 +25,7 @@ def main():
     CHARACTER_FILES   = ["marina", "jack", "captain"]
     SCENE_TITLE       = "Aboard the Sea Serpent"
     SCENE_LOCATION    = "The Sea Serpent - Main Deck"
+    SCENE_TIME_OF_DAY = "Evening"
     SCENE_DESCRIPTION = (
         "The sun is setting over the endless ocean, painting the sky in brilliant oranges and purples. "
         "The Sea Serpent rocks gently on the waves, her black sails billowing in the evening breeze. "
@@ -67,6 +68,7 @@ def main():
             story_manager=story_manager,
             story_name=BASE_DIR,
             initial_location=SCENE_LOCATION,
+            initial_time_of_day=SCENE_TIME_OF_DAY,
             initial_scene_description=SCENE_DESCRIPTION,
         )
 

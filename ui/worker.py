@@ -95,6 +95,7 @@ class RoleplayWorker(QObject):
                 story_manager=self.story_manager,
                 story_name=base_dir,
                 initial_location=cfg["scene_location"],
+                initial_time_of_day=cfg.get("scene_time_of_day"),
                 initial_scene_description=cfg["scene_description"],
             )
 

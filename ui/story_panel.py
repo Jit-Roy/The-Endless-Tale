@@ -315,15 +315,6 @@ class StoryPanel(QWidget):
                 status = "future"
             self._obj_layout.addWidget(ObjectiveItem(obj_text, status, self._obj_layout.parentWidget()))
 
-    def update_location(self, location: str):
+    def update_location(self, location: str, time_of_day: str = ""):
         self._loc_lbl.setText(location or "—")
-        h = datetime.now().hour
-        if 5 <= h < 12:
-            tod = "Morning"
-        elif 12 <= h < 17:
-            tod = "Afternoon"
-        elif 17 <= h < 20:
-            tod = "Evening"
-        else:
-            tod = "Night"
-        self._tod_lbl.setText(tod)
+        self._tod_lbl.setText(time_of_day or "")

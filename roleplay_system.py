@@ -23,6 +23,7 @@ class RoleplaySystem:
         story_manager = None,
         story_name: str = "default",
         initial_location: str = None,
+        initial_time_of_day: str = None,
         initial_scene_description: str = None
     ):
         """
@@ -35,6 +36,7 @@ class RoleplaySystem:
             story_manager: Optional StoryManager for narrative progression
             story_name: Name of the story (used for unique conversation filenames)
             initial_location: Starting location for the conversation
+            initial_time_of_day: Starting time of day for the conversation
             initial_scene_description: Optional initial scene description
         """
         
@@ -69,6 +71,7 @@ class RoleplaySystem:
         initial_scene = temp_timeline_manager.create_scene(
             scene_type="environmental",
             location=initial_location,
+            time_of_day=initial_time_of_day,
             description=initial_scene_description
         )
         temp_timeline_manager.add_event(timeline, initial_scene)
@@ -196,6 +199,7 @@ class RoleplaySystem:
                         timestamp=datetime.fromisoformat(event_data['timestamp']) if 'timestamp' in event_data else datetime.now(),
                         scene_type=event_data.get('scene_type', 'environmental'),
                         location=event_data['location'],
+                        time_of_day=event_data.get('time_of_day'),
                         description=event_data['description']
                     )
                     self.timeline.events.append(scene)
@@ -310,6 +314,7 @@ class RoleplaySystem:
                         "timeline_id": event.timeline_id,
                         "timestamp": event.timestamp.isoformat(),
                         "location": event.location,
+                        "time_of_day": getattr(event, 'time_of_day', None),
                         "description": event.description
                     }
                 elif isinstance(event, Action):

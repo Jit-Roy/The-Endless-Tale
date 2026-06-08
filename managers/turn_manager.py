@@ -127,7 +127,8 @@ class TurnManager:
             scene = self.timeline_manager.create_scene(
                 scene_type=scene_type,
                 location=scene_data.get("location", "Unknown"),
-                description=scene_data.get("event_description", "")
+                description=scene_data.get("event_description", ""),
+                time_of_day=scene_data.get("time_of_day")
             )
             self.timeline_manager.add_event(self.timeline, scene)
             try:
@@ -203,6 +204,7 @@ class TurnManager:
             all_character_names = [c.persona.name for c in self.characters]
             current_participants = list(self.timeline.current_participants)
             current_location = self.timeline_manager.get_current_location(self.timeline) or "Unknown"
+            current_tod = self.timeline_manager.get_current_time_of_day(self.timeline) or "Unknown"
             timeline_context = self.timeline_manager.get_timeline_context(
                 self.timeline,
                 recent_event_count=15
@@ -219,7 +221,8 @@ class TurnManager:
                     timeline_context,
                     all_character_names,
                     current_participants,
-                    current_location
+                    current_location,
+                    current_tod
                 ): "movements",
                 executor.submit(
                     self.timeline_manager.should_generate_scene,
@@ -248,7 +251,8 @@ class TurnManager:
             scene = self.timeline_manager.create_scene(
                 scene_type=scene_type,
                 location=scene_data.get("location", "Unknown"),
-                description=scene_data.get("event_description", "")
+                description=scene_data.get("event_description", ""),
+                time_of_day=scene_data.get("time_of_day")
             )
             with self.timeline_lock:
                 self.timeline_manager.add_event(self.timeline, scene)

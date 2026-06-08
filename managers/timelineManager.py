@@ -134,6 +134,19 @@ class TimelineManager:
         """
         scenes = self.get_recent_events(timeline,n=1,event_type="scene")
         return scenes[0].location if scenes else None
+
+    def get_current_time_of_day(self, timeline: TimelineHistory) -> Optional[str]:
+        """
+        Get the current time of day from the most recent Scene.
+        
+        Args:
+            timeline: TimelineHistory instance
+            
+        Returns:
+            Current time of day string or None
+        """
+        scenes = self.get_recent_events(timeline, n=1, event_type="scene")
+        return scenes[0].time_of_day if scenes and hasattr(scenes[0], 'time_of_day') else None
     
     def get_timeline_context(self, timeline: TimelineHistory, recent_event_count: int = 10) -> str:
         """
@@ -192,15 +205,17 @@ class TimelineManager:
         self,
         scene_type: str,
         location: str,
-        description: str
+        description: str,
+        time_of_day: Optional[str] = None
     ) -> Scene:
         """
         Create a new scene event.
         
         Args:
-            scene_type: Type of scene - 'transition' or 'environmental'
-            location: Where this scene event takes place
-            description: What happens in this scene event
+            scene_type: 'transition' or 'environmental'
+            location: Where the scene takes place
+            description: What happens in the scene
+            time_of_day: Optional time of day string
             
         Returns:
             New Scene instance
@@ -208,6 +223,7 @@ class TimelineManager:
         return Scene(
             scene_type=scene_type,
             location=location,
+            time_of_day=time_of_day,
             description=description
         )
     
@@ -344,9 +360,11 @@ class TimelineManager:
         """
         timeline_str = self.get_timeline_context(timeline, recent_event_count=recent_event_count)
         current_location = self.get_current_location(timeline)
+        current_tod = self.get_current_time_of_day(timeline)
         
         prompt = f"""You are a narrative AI assistant for a roleplay story.
         Current Location: {current_location or 'Unknown'}
+        Current Time of Day: {current_tod or 'Unknown'}
         Characters Present: {', '.join(timeline.current_participants)}
         
         RECENT TIMELINE (in chronological order):
@@ -388,6 +406,7 @@ class TimelineManager:
             "scene_generated": true,
             "scene_type": "transition",
             "location": "The NEW location they're moving to",
+            "time_of_day": "The updated time of day (e.g. Late Night, Dusk, Morning)",
             "event_description": "2-3 sentences describing the journey and arrival at new location with vivid details"
         }}
         
@@ -396,6 +415,7 @@ class TimelineManager:
             "scene_generated": true,
             "scene_type": "environmental",
             "location": "{current_location or 'Unknown'}",
+            "time_of_day": "The updated time of day if it has progressed, or {current_tod or 'Unknown'}",
             "event_description": "2-3 sentences describing what happens in current location with sensory details"
         }}
 
@@ -418,6 +438,7 @@ class TimelineManager:
                 return {
                     'scene_generated': True,
                     'location': scene_data.get('location'),
+                    'time_of_day': scene_data.get('time_of_day'),
                     'event_description': scene_data.get('event_description')
                 }
             else:
@@ -499,7 +520,8 @@ class TimelineManager:
         timeline_context: str,
         all_characters: List[str],
         current_participants: List[str],
-        current_location: str
+        current_location: str,
+        current_tod: str
     ) -> tuple[List[Dict[str, str]], List[Dict[str, str]]]:
         """
         Make ONE API call to decide both character entries AND exits.
@@ -520,10 +542,11 @@ class TimelineManager:
         prompt = f"""You are the meta-narrator for this story. Based on the full timeline context, decide which characters (if any) should enter or exit the current scene.
         CURRENT SCENE:
         Location: {current_location}
+        Current Time of Day: {current_tod}
         Currently Present: {', '.join(current_participants) if current_participants else 'None'}
         Absent Characters: {', '.join(absent_characters) if absent_characters else 'None'}
-        RECENT TIMELINE CONTEXT:
-        {timeline_context}
+        
+        RECENT TIMELINE (chronological): {timeline_context}
         YOUR TASK:
         Decide which characters should naturally enter or exit RIGHT NOW based on:
         - Story flow and narrative logic
@@ -607,12 +630,14 @@ class TimelineManager:
         """
         timeline_str = self.get_timeline_context(timeline, recent_event_count=recent_event_count)
         current_location = self.get_current_location(timeline) or "Unknown"
+        current_tod = self.get_current_time_of_day(timeline) or "Unknown"
         current_participants = timeline.current_participants
         absent_characters = [c for c in all_characters if c not in current_participants]
 
         prompt = f"""You are the meta-narrator for a roleplay story. Analyse the recent timeline and make ALL of the following decisions in ONE response:
         === STORY STATE ===
         Current Location: {current_location}
+        Current Time of Day: {current_tod}
         Currently Present: {', '.join(current_participants) if current_participants else 'None'}
         Absent Characters: {', '.join(absent_characters) if absent_characters else 'None'}
         RECENT TIMELINE (chronological): {timeline_str}
@@ -654,6 +679,7 @@ class TimelineManager:
             "scene": {{
                 "scene_type": "transition" | "environmental",
                 "location": "location name",
+                "time_of_day": "updated time of day (e.g. High Noon, Evening, Late Night)",
                 "event_description": "2-3 vivid sentences"
             }},
             "entries": [

@@ -44,6 +44,7 @@ DEFAULT_CONFIG = {
     "character_files": ["marina", "jack", "captain"],
     "scene_title":     "Aboard the Sea Serpent",
     "scene_location":  "The Sea Serpent - Main Deck",
+    "scene_time_of_day": "Evening",
     "scene_description": (
         "The sun is setting over the endless ocean, painting the sky in brilliant oranges and purples. "
         "The Sea Serpent rocks gently on the waves, her black sails billowing in the evening breeze. "
@@ -365,7 +366,13 @@ class MainWindow(QMainWindow):
             loc = self._worker.system.timeline_manager.get_current_location(
                 self._worker.system.timeline
             )
-            self._story_panel.update_location(loc or self._config["scene_location"])
+            tod = self._worker.system.timeline_manager.get_current_time_of_day(
+                self._worker.system.timeline
+            )
+            self._story_panel.update_location(
+                loc or self._config["scene_location"],
+                tod or self._config.get("scene_time_of_day", "")
+            )
 
     def _invoke_worker(self, method_name: str, *args):
         if not self._worker:

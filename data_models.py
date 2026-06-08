@@ -38,6 +38,7 @@ class Scene(TimelineEvent):
     
     scene_type: str = Field(..., description="Type of scene: 'transition' or 'environmental'")
     location: str = Field(..., description="Where this scene event takes place")
+    time_of_day: Optional[str] = Field(default=None, description="Time of day during this scene")
     description: str = Field(..., description="What happens in this scene event")
 
 
