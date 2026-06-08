@@ -377,6 +377,9 @@ class RoleplayWorker(QObject):
         story = self.system.story_manager.story
         self.story_updated.emit({
             "title": story.title,
+            "description": story.description,
+            "objectives": story.objectives,
+            "current_objective_index": story.current_objective_index,
             "current_objective": self.system.story_manager.get_current_objective() or "None",
             "beat_index": story.current_objective_index,
             "total_beats": len(story.objectives),

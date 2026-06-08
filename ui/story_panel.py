@@ -292,8 +292,9 @@ class StoryPanel(QWidget):
         total      = data.get("total_beats", len(objectives))
         beat_idx   = data.get("beat_index", cur_idx + 1)
 
-        # Chapter label
-        self._chapter_lbl.setText(f"Chapter {beat_idx}: Into the Unknown")
+        # Objective label
+        current_obj = data.get("current_objective", f"Objective {beat_idx}")
+        self._chapter_lbl.setText(current_obj)
         self._counter_lbl.setText(f"{cur_idx} / {total}")
 
         if total > 0:
