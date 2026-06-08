@@ -5,12 +5,29 @@ Each message type is rendered as its own styled QFrame card inside a QScrollArea
 
 from datetime import datetime
 from PyQt5.QtWidgets import (
-    QScrollArea, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QFrame, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QScrollArea, QFrame, QSizePolicy
 )
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtGui import QFont, QPixmap
 from pathlib import Path
 import time, traceback, json
+
+# ── Custom Content Widget ─────────────────────────────────────────────
+
+class ChatContentWidget(QWidget):
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_height()
+
+    def update_height(self):
+        # Force the widget to perfectly match its required height for the new width.
+        # This completely defeats the QScrollArea word-wrap sizeHint caching bug.
+        w = self.width()
+        if w > 0:
+            h = self.heightForWidth(w)
+            if h >= 0:
+                self.setFixedHeight(h)
 
 # Debug log for UI insert events
 _ui_log_path = Path(__file__).parent.parent / "ui_debug.log"
@@ -449,16 +466,30 @@ class ChatDisplay(QScrollArea):
             }}
         """)
 
-        self._content = QWidget()
+        self._content = ChatContentWidget()
         self._content.setStyleSheet(f"background-color: {MAIN_BG};")
         self._layout = QVBoxLayout(self._content)
         self._layout.setContentsMargins(12, 14, 12, 14)
         self._layout.setSpacing(6)
-        self._layout.addStretch()
+        self._layout.setAlignment(Qt.AlignTop)
         # temporary thinking widgets keyed by character name
         self._thinking_widgets = {}
 
         self.setWidget(self._content)
+
+        # ── Scroll state tracking ───────────────────────────────────────────
+        self._at_bottom = True
+        self.verticalScrollBar().rangeChanged.connect(self._on_range_changed)
+        self.verticalScrollBar().valueChanged.connect(self._on_value_changed)
+
+    # ── Scroll Events ────────────────────────────────────────────────────
+
+    def _on_value_changed(self, value):
+        self._at_bottom = value >= (self.verticalScrollBar().maximum() - 80)
+
+    def _on_range_changed(self, min_val, max_val):
+        if self._at_bottom:
+            self.verticalScrollBar().setValue(max_val)
 
     # ── Public API ───────────────────────────────────────────────────────
 
@@ -496,19 +527,19 @@ class ChatDisplay(QScrollArea):
     # ── Private ──────────────────────────────────────────────────────────
 
     def _insert(self, widget: QWidget):
-        # Insert the widget before the stretch at the end
         try:
             _ui_log(f"_insert: widget={widget.__class__.__name__} layout_count={self._layout.count()}")
         except Exception:
             pass
-        self._layout.insertWidget(self._layout.count() - 1, widget)
-        # Auto-scroll only if the user is already at (or near) the bottom.
-        sb = self.verticalScrollBar()
-        at_bottom = sb.value() >= (sb.maximum() - 80)
-        if at_bottom:
+        self._layout.addWidget(widget)
+        # Important: update the fixed height after adding a widget!
+        self._content.update_height()
+        # If we are at the bottom, ensure we scroll down. 
+        # rangeChanged will handle most of this, but we explicitly trigger it here too.
+        if self._at_bottom:
             QTimer.singleShot(40, self._scroll_bottom)
         try:
-            _ui_log(f"_insert: scheduled scroll at_bottom={at_bottom} sb={sb.value()}/{sb.maximum()}")
+            _ui_log(f"_insert: scheduled scroll at_bottom={self._at_bottom} sb={self.verticalScrollBar().value()}/{self.verticalScrollBar().maximum()}")
         except Exception:
             pass
 
