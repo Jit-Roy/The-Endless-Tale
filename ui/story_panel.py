@@ -72,7 +72,7 @@ class ObjectiveItem(QWidget):
             bold       = False
             font_sz    = 12
 
-        icon = QLabel(icon_txt)
+        icon = QLabel(icon_txt, self)
         icon.setFixedWidth(14)
         icon.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
         icon.setStyleSheet(
@@ -81,7 +81,7 @@ class ObjectiveItem(QWidget):
         layout.addWidget(icon)
 
         weight = "bold" if bold else "normal"
-        txt = QLabel(text)
+        txt = QLabel(text, self)
         txt.setWordWrap(True)
         txt.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         txt.setStyleSheet(f"""
@@ -313,7 +313,7 @@ class StoryPanel(QWidget):
                 status = "active"
             else:
                 status = "future"
-            self._obj_layout.addWidget(ObjectiveItem(obj_text, status))
+            self._obj_layout.addWidget(ObjectiveItem(obj_text, status, self._obj_layout.parentWidget()))
 
     def update_location(self, location: str):
         self._loc_lbl.setText(location or "—")
