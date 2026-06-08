@@ -29,14 +29,6 @@ class ChatContentWidget(QWidget):
             if h >= 0:
                 self.setFixedHeight(h)
 
-# Debug log for UI insert events
-_ui_log_path = Path(__file__).parent.parent / "ui_debug.log"
-def _ui_log(msg: str):
-    try:
-        with open(_ui_log_path, "a", encoding="utf-8") as f:
-            f.write(f"{time.time()} {msg}\n")
-    except Exception:
-        pass
 
 # ── Palette ─────────────────────────────────────────────────────────────────
 MAIN_BG      = "#161616"
@@ -496,10 +488,7 @@ class ChatDisplay(QScrollArea):
     def append_event(self, event: dict):
         t    = event.get("type", "")
         char = event.get("character", "")
-        try:
-            _ui_log(f"append_event: type={t} char={char} keys={list(event.keys())} dialouge_len={len(event.get('dialouge',''))}")
-        except Exception:
-            pass
+
 
         if t == "message":
             card = PlayerCard(event, self.player_name, self._content) if char == self.player_name \
@@ -527,10 +516,7 @@ class ChatDisplay(QScrollArea):
     # ── Private ──────────────────────────────────────────────────────────
 
     def _insert(self, widget: QWidget):
-        try:
-            _ui_log(f"_insert: widget={widget.__class__.__name__} layout_count={self._layout.count()}")
-        except Exception:
-            pass
+
         self._layout.addWidget(widget)
         # Important: update the fixed height after adding a widget!
         self._content.update_height()
@@ -538,10 +524,7 @@ class ChatDisplay(QScrollArea):
         # rangeChanged will handle most of this, but we explicitly trigger it here too.
         if self._at_bottom:
             QTimer.singleShot(40, self._scroll_bottom)
-        try:
-            _ui_log(f"_insert: scheduled scroll at_bottom={self._at_bottom} sb={self.verticalScrollBar().value()}/{self.verticalScrollBar().maximum()}")
-        except Exception:
-            pass
+
 
     def _scroll_bottom(self):
         self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())

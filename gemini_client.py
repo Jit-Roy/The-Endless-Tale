@@ -12,27 +12,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-LOG_FILE_NAME = "gemini_api.log"
-LOG_FILE_PATH = Path(__file__).resolve().parent / LOG_FILE_NAME
-
-
-def _get_gemini_logger() -> logging.Logger:
-    logger = logging.getLogger("gemini_client")
-    if logger.handlers:
-        return logger
-
-    logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(LOG_FILE_PATH, encoding="utf-8")
-    handler.setLevel(logging.DEBUG)
-    handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
-    logger.addHandler(handler)
-    logger.propagate = False
-    logger.debug("Initialized Gemini logger at %s", LOG_FILE_PATH)
-    return logger
-
-
-logger = _get_gemini_logger()
-
 
 class Config:
     GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
@@ -107,13 +86,6 @@ class GenerativeModel:
 
         for attempt in range(max_retries + 1):
             start_time = time.perf_counter()
-            logger.info(
-                "Gemini request started: model=%s, attempt=%d, prompt_length=%d",
-                self.model_name,
-                attempt + 1,
-                len(prompt or ""),
-            )
-            logger.debug("Gemini request payload:\n%s", prompt)
 
             try:
                 response = self._client.models.generate_content(
@@ -126,13 +98,6 @@ class GenerativeModel:
             except Exception as e:
                 duration = time.perf_counter() - start_time
                 error_msg = str(e)
-                logger.exception(
-                    "Gemini request failed: model=%s, attempt=%d, elapsed=%.4fs, error=%s",
-                    self.model_name,
-                    attempt + 1,
-                    duration,
-                    error_msg,
-                )
                 if "429" in error_msg or "rate" in error_msg.lower():
                     raise Exception(f"ResourceExhausted: Rate limit exceeded. {error_msg}")
                 elif "401" in error_msg or "invalid" in error_msg.lower():
@@ -142,22 +107,8 @@ class GenerativeModel:
             # Handle empty response outside the try block — clean retry flow
             duration = time.perf_counter() - start_time
             if not text or not text.strip():
-                logger.warning(
-                    "Gemini returned empty text: model=%s, attempt=%d, elapsed=%.4fs",
-                    self.model_name,
-                    attempt + 1,
-                    duration,
-                )
                 if attempt < max_retries:
                     continue
                 raise ValueError("Gemini returned an empty response after retries.")
 
-            logger.info(
-                "Gemini response received: model=%s, attempt=%d, elapsed=%.4fs, response_length=%d",
-                self.model_name,
-                attempt + 1,
-                duration,
-                len(text),
-            )
-            logger.debug("Gemini response text:\n%s", text)
             return GenerativeResponse(text)
